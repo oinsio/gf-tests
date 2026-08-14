@@ -1,0 +1,51 @@
+schema: spec-driven
+
+context: |
+  Tech stack:
+  - Java 25 (sourceCompatibility/targetCompatibility)
+  - Gradle (build system)
+  - Spock Framework 2.4 + Groovy 4.0 (testing)
+  - JUnit Platform (test runner)
+
+  Project structure:
+  - src/main/java/ - production code
+  - src/test/groovy/ - Spock specifications
+  - Convention: *Spec.groovy for test files
+
+  Conventions:
+  - Java code follows standard Java style (camelCase methods, PascalCase classes)
+  - Test methods use descriptive string names in Spock (e.g., "should print hello world message")
+  - Given/When/Then or Given/Expect blocks in Spock specs
+  - Package structure: com.example.*
+
+  Domain:
+  - Standalone Java application (HelloWorld example)
+  - Project: jetbrains-air-tests - sandbox for testing Java/Gradle/Spock setup
+
+rules:
+  proposal:
+    - Keep proposals focused and actionable
+    - Include a "Non-goals" section to clarify scope boundaries
+    - Reference affected source paths when applicable
+  specs:
+    - Write behavioral specs, not implementation details
+    - Use scenario-based format (Given/When/Then style)
+    - Each spec should be independently testable
+  design:
+    - Prefer simplicity over abstraction
+    - Document trade-offs when choosing between approaches
+    - Reference existing patterns in the codebase
+  tasks:
+    - Break tasks into chunks of max 2 hours
+    - Each task should be independently committable
+    - Include verification steps (run tests, lint, etc.)
+
+operations:
+  apply:
+    guidance:
+      - Run tests after each significant change
+      - Keep commits atomic and well-described
+  archive:
+    guidance:
+      - Ensure all artifacts are consistent before archiving
+      - Summarize what was implemented vs. what was planned
