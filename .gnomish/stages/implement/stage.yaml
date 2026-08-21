@@ -24,6 +24,8 @@ verify:
     criteriaFile: stages/implement/acceptance.md
     model: sonnet
     settings:
-      maxTurns: 5
+      maxTurns: 10
+      disallowedTools:
+        - Bash
     votes: 1
 advancement: auto
