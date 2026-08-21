@@ -30,4 +30,8 @@ public class HelloWorld {
         String normalized = answer.trim().toLowerCase();
         return normalized.equals("yes") || normalized.equals("y") || normalized.equals("да");
     }
+
+    public String greet(String name) {
+        return "Hello, " + name + "!";
+    }
 }
