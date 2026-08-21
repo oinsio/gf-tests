@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Wrapper around the locally built Gnomish Factory jar (gnomish.jar).
+#
+# Adds two things every invocation from this project needs, then passes the rest through:
+#   --dir=<this project, absolute>   (a relative --dir breaks law-file resolution)
+#   --factory.bindings.default=host  (no sandbox image is built for this project yet)
+#
+# Both are plain defaults: pass your own --dir=... or --factory.bindings.default=container
+# and yours wins (last flag on the Spring command line takes precedence).
+#
+#   ./gnomish run --task="..." --mode=in-place --interactive
+#   ./gnomish status --task=<id>
+set -euo pipefail
+
+project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+exec java -jar "$project_dir/gnomish.jar" \
+    --dir="$project_dir" \
+    --factory.bindings.default=host \
+    "$@"

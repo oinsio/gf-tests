@@ -1,0 +1,22 @@
+purpose: implement the task in the Java/Gradle/Spock codebase and keep the build green
+inputs:
+  - kind: source
+outputs:
+  - id: implementation-diff
+executor:
+  type: agent-cli
+  model: sonnet
+  settings:
+    maxTurns: 30
+    roundTimeout: 900s
+instructions: stages/implement/instructions.md
+verify:
+  - type: command
+    command: ./gradlew test --console=plain
+  - type: judge
+    criteriaFile: stages/implement/acceptance.md
+    model: sonnet
+    settings:
+      maxTurns: 5
+    votes: 1
+advancement: auto
