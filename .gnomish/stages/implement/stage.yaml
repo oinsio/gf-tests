@@ -9,6 +9,13 @@ executor:
   settings:
     maxTurns: 30
     roundTimeout: 900s
+    allowedTools:
+      - Read
+      - Glob
+      - Grep
+      - Edit
+      - Write
+      - Bash
 instructions: stages/implement/instructions.md
 verify:
   - type: command

@@ -3,9 +3,9 @@
 #
 # Adds two things every invocation from this project needs, then passes the rest through:
 #   --dir=<this project, absolute>   (a relative --dir breaks law-file resolution)
-#   --factory.bindings.default=host  (no sandbox image is built for this project yet)
+#   --factory.bindings.default-binding=host  (no sandbox image is built for this project yet)
 #
-# Both are plain defaults: pass your own --dir=... or --factory.bindings.default=container
+# Both are plain defaults: pass your own --dir=... or --factory.bindings.default-binding=container
 # and yours wins (last flag on the Spring command line takes precedence).
 #
 #   ./gnomish run --task="..." --mode=in-place --interactive
@@ -16,5 +16,5 @@ project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 exec java -jar "$project_dir/gnomish.jar" \
     --dir="$project_dir" \
-    --factory.bindings.default=host \
+    --factory.bindings.default-binding=host \
     "$@"
