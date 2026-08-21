@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# The agent CLI the factory launches for gnome and judge rounds
+# (factory.agent-cli-binary points here).
+#
+# Why it exists: the factory renders `--allowedTools` from the stage manifest, but that
+# flag only enables a tool by NAME — it does not lift Claude Code's own permission gate.
+# In `-p` mode there is nobody to approve, so every Edit/Write comes back as
+# "Claude requested permissions to write to ...", the gnome burns its turns looking for a
+# way around, and the round ends with no result event (MissingResultEventException).
+#
+# --permission-mode acceptEdits auto-approves file edits and nothing else; individual Bash
+# commands can still be gated. If a stage needs unrestricted Bash, switch to
+# bypassPermissions here — but note the gnome then runs unsandboxed with your privileges.
+set -euo pipefail
+
+exec claude --permission-mode acceptEdits "$@"
