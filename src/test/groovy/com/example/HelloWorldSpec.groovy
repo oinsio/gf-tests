@@ -34,4 +34,12 @@ class HelloWorldSpec extends Specification {
         text.endsWith("World!")
         text.contains("World")
     }
+
+    def "greet returns personalized message"() {
+        given:
+        def helloWorld = new HelloWorld()
+
+        expect:
+        helloWorld.greet("Alice") == "Hello, Alice!"
+    }
 }
