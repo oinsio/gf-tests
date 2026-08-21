@@ -1,6 +1,0 @@
-{"seq":0,"tool":"Grep","start":"2026-08-21T20:54:54.012209Z","durationMillis":0}
-{"seq":1,"tool":"Read","start":"2026-08-21T20:54:54.012655Z","durationMillis":0}
-{"seq":2,"tool":"Read","start":"2026-08-21T20:54:54.012851Z","durationMillis":0}
-{"seq":3,"tool":"Edit","start":"2026-08-21T20:54:54.013130Z","durationMillis":0}
-{"seq":4,"tool":"Edit","start":"2026-08-21T20:54:54.013416Z","durationMillis":0}
-{"seq":5,"tool":"Bash","start":"2026-08-21T20:54:54.013570Z","durationMillis":0}
