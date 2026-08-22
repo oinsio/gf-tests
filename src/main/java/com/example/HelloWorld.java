@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.Scanner;
 
 public class HelloWorld {
@@ -18,6 +19,12 @@ public class HelloWorld {
 
     static void run(InputStream in, PrintStream out, Path outputFile) throws IOException {
         out.println(GREETING);
+
+        List<String> history = readHistory(outputFile);
+        out.println("История приветствий:");
+        history.forEach(out::println);
+        out.println("Это приветствие номер " + (history.size() + 1) + ".");
+
         out.println("Save greeting to file? (yes/no)");
 
         Scanner scanner = new Scanner(in);
@@ -26,6 +33,10 @@ public class HelloWorld {
         if (isAffirmative(answer)) {
             appendGreeting(GREETING, outputFile);
         }
+    }
+
+    static List<String> readHistory(Path file) throws IOException {
+        return Files.exists(file) ? Files.readAllLines(file) : List.of();
     }
 
     private static boolean isAffirmative(String answer) {

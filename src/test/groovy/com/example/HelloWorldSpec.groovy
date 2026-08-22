@@ -115,4 +115,52 @@ class HelloWorldSpec extends Specification {
                 "Hello, World!" + System.lineSeparator() +
                 "Hello, Alice!" + System.lineSeparator()
     }
+
+    def "run prints empty history and greeting number 1 when the file does not exist"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("История приветствий:")
+        output.toString().contains("Это приветствие номер 1.")
+    }
+
+    def "run prints previous greetings from the history file and the correct greeting number"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        HelloWorld.appendGreeting("Hello, World!", outputFile)
+        HelloWorld.appendGreeting("Hello, World!", outputFile)
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().count("Hello, World!") == 3
+        output.toString().contains("Это приветствие номер 3.")
+    }
+
+    def "readHistory returns an empty list when the file does not exist"() {
+        given:
+        def file = tempDir.resolve("missing.txt")
+
+        expect:
+        HelloWorld.readHistory(file) == []
+    }
+
+    def "readHistory returns the lines already stored in the file"() {
+        given:
+        def file = tempDir.resolve("greetings.txt")
+        HelloWorld.appendGreeting("Hello, World!", file)
+        HelloWorld.appendGreeting("Hello, Alice!", file)
+
+        expect:
+        HelloWorld.readHistory(file) == ["Hello, World!", "Hello, Alice!"]
+    }
 }

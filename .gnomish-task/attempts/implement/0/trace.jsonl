@@ -1,0 +1,6 @@
+{"seq":0,"tool":"Bash","start":"2026-08-22T07:24:55.333367Z","durationMillis":399}
+{"seq":1,"tool":"Read","start":"2026-08-22T07:24:58.542082Z","durationMillis":7}
+{"seq":2,"tool":"Read","start":"2026-08-22T07:24:58.756264Z","durationMillis":1}
+{"seq":3,"tool":"Edit","start":"2026-08-22T07:25:12.898876Z","durationMillis":9}
+{"seq":4,"tool":"Edit","start":"2026-08-22T07:25:21.468574Z","durationMillis":6}
+{"seq":5,"tool":"Bash","start":"2026-08-22T07:25:24.622920Z","durationMillis":2552}
