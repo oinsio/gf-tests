@@ -5,13 +5,15 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Scanner;
 
 public class HelloWorld {
     private static final String GREETING = "Hello, World!";
+    private static final Path GREETINGS_FILE = Path.of("greetings.txt");
 
     public static void main(String[] args) throws IOException {
-        run(System.in, System.out, Path.of("greeting.txt"));
+        run(System.in, System.out, GREETINGS_FILE);
     }
 
     static void run(InputStream in, PrintStream out, Path outputFile) throws IOException {
@@ -22,7 +24,7 @@ public class HelloWorld {
         String answer = scanner.hasNextLine() ? scanner.nextLine() : "";
 
         if (isAffirmative(answer)) {
-            Files.writeString(outputFile, GREETING + System.lineSeparator());
+            appendGreeting(GREETING, outputFile);
         }
     }
 
@@ -35,7 +37,8 @@ public class HelloWorld {
         return "Hello, " + name + "!";
     }
 
-    public String greet(String name) {
-        return "Hello, " + name + "!";
+    static void appendGreeting(String greeting, Path file) throws IOException {
+        Files.writeString(file, greeting + System.lineSeparator(),
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 }

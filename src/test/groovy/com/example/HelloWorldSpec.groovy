@@ -89,4 +89,30 @@ class HelloWorldSpec extends Specification {
         expect:
         helloWorld.greet("Alice") == "Hello, Alice!"
     }
+
+    def "appendGreeting creates the file when it does not exist"() {
+        given:
+        def file = tempDir.resolve("greetings.txt")
+
+        when:
+        HelloWorld.appendGreeting("Hello, World!", file)
+
+        then:
+        Files.exists(file)
+        Files.readString(file) == "Hello, World!" + System.lineSeparator()
+    }
+
+    def "appendGreeting continues writing into the same file"() {
+        given:
+        def file = tempDir.resolve("greetings.txt")
+
+        when:
+        HelloWorld.appendGreeting("Hello, World!", file)
+        HelloWorld.appendGreeting("Hello, Alice!", file)
+
+        then:
+        Files.readString(file) ==
+                "Hello, World!" + System.lineSeparator() +
+                "Hello, Alice!" + System.lineSeparator()
+    }
 }
