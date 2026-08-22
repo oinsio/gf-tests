@@ -1,16 +1,36 @@
 package com.example;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Scanner;
 
 public class HelloWorld {
+    private static final String GREETING = "Hello, World!";
     private static final Path GREETINGS_FILE = Path.of("greetings.txt");
 
     public static void main(String[] args) throws IOException {
-        System.out.println("Hello, World!");
-        appendGreeting("Hello, World!", GREETINGS_FILE);
+        run(System.in, System.out, GREETINGS_FILE);
+    }
+
+    static void run(InputStream in, PrintStream out, Path outputFile) throws IOException {
+        out.println(GREETING);
+        out.println("Save greeting to file? (yes/no)");
+
+        Scanner scanner = new Scanner(in);
+        String answer = scanner.hasNextLine() ? scanner.nextLine() : "";
+
+        if (isAffirmative(answer)) {
+            appendGreeting(GREETING, outputFile);
+        }
+    }
+
+    private static boolean isAffirmative(String answer) {
+        String normalized = answer.trim().toLowerCase();
+        return normalized.equals("yes") || normalized.equals("y") || normalized.equals("да");
     }
 
     public String greet(String name) {

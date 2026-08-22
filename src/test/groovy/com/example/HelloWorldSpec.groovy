@@ -26,6 +26,46 @@ class HelloWorldSpec extends Specification {
         System.setOut(System.out)
     }
 
+    def "should ask whether to save the greeting to a file"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("Save greeting to file?")
+    }
+
+    def "should save the greeting to a file when the user agrees"() {
+        given:
+        def input = new ByteArrayInputStream("yes\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        Files.exists(outputFile)
+        Files.readString(outputFile).contains("Hello, World!")
+    }
+
+    def "should not save the greeting to a file when the user declines"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        !Files.exists(outputFile)
+    }
+
     def "addition works correctly"() {
         expect:
         1 + 1 == 2

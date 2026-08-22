@@ -16,6 +16,13 @@ executor:
       - Edit
       - Write
       - Bash
+    disallowedTools:
+      - Agent
+      - ScheduleWakeup
+      - SendMessage
+      - ToolSearch
+      - WebFetch
+      - WebSearch
 instructions: stages/implement/instructions.md
 verify:
   - type: command
@@ -27,5 +34,13 @@ verify:
       maxTurns: 10
       disallowedTools:
         - Bash
+        - Agent
+        - ScheduleWakeup
+        - SendMessage
+        - ToolSearch
+        - Edit
+        - Write
+        - WebFetch
+        - WebSearch
     votes: 1
 advancement: auto
