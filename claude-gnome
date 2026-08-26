@@ -14,4 +14,4 @@
 set -euo pipefail
 
 model="${OLLAMA_MODEL:-llama3.1}"
-exec ollama run "$model" "$@"
+exec ollama launch claude --permission-mode acceptEdits --strict-mcp-config "$@"
