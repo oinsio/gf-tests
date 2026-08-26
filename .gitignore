@@ -36,3 +36,6 @@ Thumbs.db
 # Gradle
 .gradle/
 !gradle/wrapper/gradle-wrapper.jar
+
+/logs
+GNOMISH-FINDINGS.md
