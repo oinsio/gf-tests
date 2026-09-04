@@ -1,6 +1,6 @@
-# jetbrains-air-tests
+# Gnomish Factory tests
 
-Sandbox project for testing Java/Gradle/Spock setup.
+Sandbox project for testing Java/Gradle/Spock setup for https://github.com/oinsio/gnomish-factory.
 
 ## Technologies
 
