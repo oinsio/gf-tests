@@ -17,6 +17,15 @@ Sandbox project for testing Java/Gradle/Spock setup.
 
 Prints `Hello, World!`.
 
+## Features
+
+- Prints the `Hello, World!` greeting.
+- Shows the history of previously saved greetings on each run.
+- Reports the sequence number of the current greeting (e.g. "Это приветствие номер 3.").
+- Prompts the user whether to save the greeting, accepting `yes`/`y`/`да` as confirmation.
+- Appends confirmed greetings to `greetings.txt`, preserving prior entries.
+- `HelloWorld#greet(name)` builds a personalized greeting message.
+
 ## Run tests
 
 ```bash
