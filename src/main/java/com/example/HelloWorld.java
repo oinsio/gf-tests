@@ -14,11 +14,16 @@ public class HelloWorld {
     private static final Path GREETINGS_FILE = Path.of("greetings.txt");
 
     public static void main(String[] args) throws IOException {
-        run(System.in, System.out, GREETINGS_FILE);
+        run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
     }
 
-    static void run(InputStream in, PrintStream out, Path outputFile) throws IOException {
-        out.println(GREETING);
+    static String greetingFor(String[] args) {
+        String name = String.join(" ", args).trim();
+        return name.isEmpty() ? GREETING : "Hello, " + name + "!";
+    }
+
+    static void run(String greeting, InputStream in, PrintStream out, Path outputFile) throws IOException {
+        out.println(greeting);
 
         List<String> history = readHistory(outputFile);
         out.println("История приветствий:");
@@ -31,7 +36,7 @@ public class HelloWorld {
         String answer = scanner.hasNextLine() ? scanner.nextLine() : "";
 
         if (isAffirmative(answer)) {
-            appendGreeting(GREETING, outputFile);
+            appendGreeting(greeting, outputFile);
         }
     }
 

@@ -1,6 +1,6 @@
 ## 1. Compute the greeting from arguments
 
-- [ ] 1.1 Add a `greetingFor(String[] args)` helper to `HelloWorld` that joins
+- [x] 1.1 Add a `greetingFor(String[] args)` helper to `HelloWorld` that joins
       `args` with a single space, trims the result, and returns
       `"Hello, " + name + "!"`, falling back to `"Hello, World!"` when the
       trimmed name is empty; verified by
@@ -14,7 +14,7 @@
 
 ## 2. Thread the computed greeting through `run`
 
-- [ ] 2.1 Change `run`'s signature to accept the greeting text as its first
+- [x] 2.1 Change `run`'s signature to accept the greeting text as its first
       parameter (`run(String greeting, InputStream in, PrintStream out, Path
       outputFile)`) and use it wherever it currently reads the `GREETING`
       constant (printing, history count, save-to-file); update `main` to call
@@ -30,14 +30,14 @@
 
 ## 3. Cover argument-driven end-to-end behavior
 
-- [ ] 3.1 Add `HelloWorldSpec` scenarios that call `run` with a
+- [x] 3.1 Add `HelloWorldSpec` scenarios that call `run` with a
       `greetingFor`-computed greeting to verify a personalized greeting is
       appended to `greetings.txt` when the user agrees to save
       (`personalized greeting is appended to the file when the user agrees`)
       and that it counts correctly in printed history alongside prior
       entries (`personalized greeting counts correctly in the printed
       history`).
-- [ ] 3.2 Add a `HelloWorldSpec` scenario that calls `HelloWorld.main` with a
+- [x] 3.2 Add a `HelloWorldSpec` scenario that calls `HelloWorld.main` with a
       single-element `args` array (e.g. `["Alice"]` with `System.in` closed)
       and asserts the captured stdout contains `Hello, Alice!` instead of
       `Hello, World!` (`main prints a personalized greeting when a name
@@ -47,5 +47,5 @@
 
 ## 4. Full verification
 
-- [ ] 4.1 Run `./gradlew test` and confirm all `HelloWorldSpec` scenarios
+- [x] 4.1 Run `./gradlew test` and confirm all `HelloWorldSpec` scenarios
       pass, including the new argument-driven ones.
