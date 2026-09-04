@@ -223,6 +223,95 @@ class HelloWorldSpec extends Specification {
         output.toString().contains("Это приветствие номер 2.")
     }
 
+    def "run prints only the last 5 history entries when more than 5 exist"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        def lines = output.toString().readLines()
+        def displayed = lines.findAll { it.startsWith("Hello, Number") }
+        displayed == ["Hello, Number 4!", "Hello, Number 5!", "Hello, Number 6!",
+                       "Hello, Number 7!", "Hello, Number 8!"]
+    }
+
+    def "run prints all history entries when there are 5 or fewer"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..5).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        def lines = output.toString().readLines()
+        def displayed = lines.findAll { it.startsWith("Hello, Number") }
+        displayed == ["Hello, Number 1!", "Hello, Number 2!", "Hello, Number 3!",
+                       "Hello, Number 4!", "Hello, Number 5!"]
+    }
+
+    def "run prints the hidden-count summary line when history exceeds 5 entries"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("и ещё 3 ранее.")
+    }
+
+    def "run omits the hidden-count summary line when history has 5 or fewer entries"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..5).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        !output.toString().contains("ранее.")
+    }
+
+    def "run omits the hidden-count summary line when history is empty"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        !output.toString().contains("ранее.")
+    }
+
+    def "run reports the correct greeting number when history is truncated"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("Это приветствие номер 9.")
+    }
+
     def "main prints a personalized greeting when a name argument is supplied"() {
         given:
         def output = new ByteArrayOutputStream()

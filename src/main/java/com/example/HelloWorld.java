@@ -12,6 +12,7 @@ import java.util.Scanner;
 public class HelloWorld {
     private static final String GREETING = "Hello, World!";
     private static final Path GREETINGS_FILE = Path.of("greetings.txt");
+    private static final int HISTORY_DISPLAY_LIMIT = 5;
 
     public static void main(String[] args) throws IOException {
         run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
@@ -27,7 +28,14 @@ public class HelloWorld {
 
         List<String> history = readHistory(outputFile);
         out.println("История приветствий:");
-        history.forEach(out::println);
+        int hiddenCount = history.size() - HISTORY_DISPLAY_LIMIT;
+        if (hiddenCount > 0) {
+            out.println("и ещё " + hiddenCount + " ранее.");
+        }
+        List<String> displayedHistory = hiddenCount > 0
+                ? history.subList(hiddenCount, history.size())
+                : history;
+        displayedHistory.forEach(out::println);
         out.println("Это приветствие номер " + (history.size() + 1) + ".");
 
         out.println("Save greeting to file? (yes/no)");
