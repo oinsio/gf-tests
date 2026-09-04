@@ -1,0 +1,42 @@
+# Быстрый старт
+
+Инструкция по сборке, запуску и проверке результатов проекта `jetbrains-air-tests`.
+
+## 1. Как собрать проект
+
+```bash
+./gradlew build
+```
+
+Команда скомпилирует исходный код, соберёт тестовые Spock-спецификации и выполнит тесты. Используется обёртка Gradle (`gradlew`), поэтому устанавливать Gradle отдельно не нужно — версия зафиксирована в `gradle/wrapper`.
+
+## 2. Как запустить проект
+
+```bash
+./gradlew run
+```
+
+Запускает приложение через плагин `application`. Точка входа — класс `com.example.HelloWorld` (см. `mainClass` в `build.gradle`). Приложение печатает `Hello, World!` в консоль.
+
+## 3. Где смотреть результаты запуска
+
+- **Вывод приложения** — прямо в консоли после `./gradlew run`.
+- **Результаты тестов**:
+  ```bash
+  ./gradlew test
+  ```
+  - HTML-отчёт: `build/reports/tests/test/index.html`
+  - XML-отчёты (для CI): `build/test-results/test/`
+- **Собранные артефакты** (classes, jar и т.п.) — в каталоге `build/`.
+
+## 4. Что ещё важно знать
+
+- **Java 25** — убедитесь, что установлена соответствующая JDK (`sourceCompatibility`/`targetCompatibility` в `build.gradle`).
+- **Структура проекта**:
+  ```
+  src/main/java/com/example/   — исходный код приложения
+  src/test/groovy/com/example/ — Spock-спецификации (тесты)
+  openspec/                    — спецификации и конфигурация workflow (spec-driven development)
+  ```
+- **Тестовый фреймворк** — Spock 2.4 (Groovy 4.0), запускается через JUnit Platform.
+- Каталог `build/` не хранится в репозитории — он создаётся при сборке и может быть безопасно удалён (`./gradlew clean`).
