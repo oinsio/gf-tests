@@ -8,4 +8,4 @@ tracker:
   heartbeat-ttl-multiplier: 3
   github:
     api-url: https://api.github.com
-    repo: oinsio/jetbrains-air-tests
+    repo: oinsio/gf-tests
