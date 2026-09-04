@@ -5,7 +5,7 @@ outputs:
   - id: implementation-diff
 executor:
   type: agent-cli
-  model: gpt-oss/120b:cloud
+  model: sonnet
   settings:
     maxTurns: 30
     roundTimeout: 900s
@@ -29,7 +29,7 @@ verify:
     command: ./gradlew test --console=plain
   - type: judge
     criteriaFile: stages/implement/acceptance.md
-    model: gpt-oss/120b:cloud
+    model: sonnet
     settings:
       maxTurns: 10
       disallowedTools:

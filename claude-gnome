@@ -15,5 +15,5 @@ set -euo pipefail
 
 # --strict-mcp-config with no --mcp-config means "no MCP servers at all": the operator's
 # own servers (jetbrains, playwright, ...) have no business in a gnome round, and their tool
-# definitions alone cost ~20 KB of the round's 64 KB output budget.
-exec cu kiro --permission-mode acceptEdits --strict-mcp-config "$@"
+# definitions alone cost ~20 KB of the round's starting context.
+exec claude --permission-mode acceptEdits --strict-mcp-config "$@"
