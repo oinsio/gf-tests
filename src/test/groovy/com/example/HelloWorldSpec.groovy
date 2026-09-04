@@ -33,7 +33,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run(input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
         output.toString().contains("Save greeting to file?")
@@ -46,7 +46,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run(input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
         Files.exists(outputFile)
@@ -60,7 +60,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run(input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
         !Files.exists(outputFile)
@@ -123,7 +123,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run(input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
         output.toString().contains("История приветствий:")
@@ -139,7 +139,7 @@ class HelloWorldSpec extends Specification {
         HelloWorld.appendGreeting("Hello, World!", outputFile)
 
         when:
-        HelloWorld.run(input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
         output.toString().count("Hello, World!") == 3
@@ -162,5 +162,81 @@ class HelloWorldSpec extends Specification {
 
         expect:
         HelloWorld.readHistory(file) == ["Hello, World!", "Hello, Alice!"]
+    }
+
+    def "greetingFor returns the default greeting with no arguments"() {
+        expect:
+        HelloWorld.greetingFor([] as String[]) == "Hello, World!"
+    }
+
+    def "greetingFor returns a personalized greeting for a single argument"() {
+        expect:
+        HelloWorld.greetingFor(["Alice"] as String[]) == "Hello, Alice!"
+    }
+
+    def "greetingFor trims surrounding whitespace from a single argument"() {
+        expect:
+        HelloWorld.greetingFor(["  Alice  "] as String[]) == "Hello, Alice!"
+    }
+
+    def "greetingFor joins multiple arguments with a space"() {
+        expect:
+        HelloWorld.greetingFor(["Alice", "Smith"] as String[]) == "Hello, Alice Smith!"
+    }
+
+    def "greetingFor falls back to the default greeting for a single blank argument"() {
+        expect:
+        HelloWorld.greetingFor([""] as String[]) == "Hello, World!"
+    }
+
+    def "greetingFor falls back to the default greeting for a single whitespace-only argument"() {
+        expect:
+        HelloWorld.greetingFor(["   "] as String[]) == "Hello, World!"
+    }
+
+    def "personalized greeting is appended to the file when the user agrees"() {
+        given:
+        def input = new ByteArrayInputStream("yes\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+
+        when:
+        HelloWorld.run(HelloWorld.greetingFor(["Alice"] as String[]), input, new PrintStream(output), outputFile)
+
+        then:
+        Files.exists(outputFile)
+        Files.readString(outputFile).contains("Hello, Alice!")
+    }
+
+    def "personalized greeting counts correctly in the printed history"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        HelloWorld.appendGreeting("Hello, World!", outputFile)
+
+        when:
+        HelloWorld.run(HelloWorld.greetingFor(["Alice"] as String[]), input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("Hello, Alice!")
+        output.toString().contains("Это приветствие номер 2.")
+    }
+
+    def "main prints a personalized greeting when a name argument is supplied"() {
+        given:
+        def output = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(output))
+        System.setIn(new ByteArrayInputStream(new byte[0]))
+
+        when:
+        HelloWorld.main(["Alice"] as String[])
+
+        then:
+        output.toString().contains("Hello, Alice!")
+
+        cleanup:
+        System.setOut(System.out)
+        System.setIn(System.in)
     }
 }
