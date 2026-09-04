@@ -6,6 +6,8 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
@@ -29,13 +31,15 @@ public class HelloWorld {
         List<String> history = readHistory(outputFile);
         out.println("История приветствий:");
         int hiddenCount = history.size() - HISTORY_DISPLAY_LIMIT;
-        if (hiddenCount > 0) {
-            out.println("и ещё " + hiddenCount + " ранее.");
-        }
         List<String> displayedHistory = hiddenCount > 0
                 ? history.subList(hiddenCount, history.size())
                 : history;
-        displayedHistory.forEach(out::println);
+        List<String> reversedHistory = new ArrayList<>(displayedHistory);
+        Collections.reverse(reversedHistory);
+        reversedHistory.forEach(out::println);
+        if (hiddenCount > 0) {
+            out.println("и ещё " + hiddenCount + " ранее.");
+        }
         out.println("Это приветствие номер " + (history.size() + 1) + ".");
 
         out.println("Save greeting to file? (yes/no)");

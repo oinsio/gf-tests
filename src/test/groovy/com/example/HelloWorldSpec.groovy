@@ -223,7 +223,7 @@ class HelloWorldSpec extends Specification {
         output.toString().contains("Это приветствие номер 2.")
     }
 
-    def "run prints only the last 5 history entries when more than 5 exist"() {
+    def "should print history newest first when history exceeds the display limit"() {
         given:
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
@@ -236,11 +236,12 @@ class HelloWorldSpec extends Specification {
         then:
         def lines = output.toString().readLines()
         def displayed = lines.findAll { it.startsWith("Hello, Number") }
-        displayed == ["Hello, Number 4!", "Hello, Number 5!", "Hello, Number 6!",
-                       "Hello, Number 7!", "Hello, Number 8!"]
+        displayed == ["Hello, Number 8!", "Hello, Number 7!", "Hello, Number 6!",
+                       "Hello, Number 5!", "Hello, Number 4!"]
+        lines.indexOf("и ещё 3 ранее.") > lines.indexOf("Hello, Number 4!")
     }
 
-    def "run prints all history entries when there are 5 or fewer"() {
+    def "run prints all history entries newest first when there are 5 or fewer"() {
         given:
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
@@ -253,8 +254,8 @@ class HelloWorldSpec extends Specification {
         then:
         def lines = output.toString().readLines()
         def displayed = lines.findAll { it.startsWith("Hello, Number") }
-        displayed == ["Hello, Number 1!", "Hello, Number 2!", "Hello, Number 3!",
-                       "Hello, Number 4!", "Hello, Number 5!"]
+        displayed == ["Hello, Number 5!", "Hello, Number 4!", "Hello, Number 3!",
+                       "Hello, Number 2!", "Hello, Number 1!"]
     }
 
     def "run prints the hidden-count summary line when history exceeds 5 entries"() {
@@ -310,6 +311,41 @@ class HelloWorldSpec extends Specification {
 
         then:
         output.toString().contains("Это приветствие номер 9.")
+    }
+
+    def "should still report the total greeting count after reversing the display order"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        def lines = output.toString().readLines()
+        def displayed = lines.findAll { it.startsWith("Hello, Number") }
+        displayed.size() == 5
+        output.toString().contains("Это приветствие номер 9.")
+    }
+
+    def "run prints history newest first when there are fewer than 5 entries"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        HelloWorld.appendGreeting("Hello, Number 1!", outputFile)
+        HelloWorld.appendGreeting("Hello, Number 2!", outputFile)
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+
+        then:
+        def lines = output.toString().readLines()
+        def displayed = lines.findAll { it.startsWith("Hello, Number") }
+        displayed == ["Hello, Number 2!", "Hello, Number 1!"]
+        !output.toString().contains("ранее.")
     }
 
     def "main prints a personalized greeting when a name argument is supplied"() {
