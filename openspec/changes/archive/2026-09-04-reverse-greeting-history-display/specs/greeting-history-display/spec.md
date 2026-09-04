@@ -1,10 +1,4 @@
-# greeting-history-display Specification
-
-## Purpose
-Controls how many previously saved greetings are printed on each run, so the
-console output stays short even as `greetings.txt` accumulates many entries.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Display only the most recent greetings
 The system SHALL print at most the 5 most recent entries from the greeting
@@ -47,14 +41,3 @@ entries are hidden.
 - **WHEN** the greeting history file does not exist or is empty
 - **THEN** the system prints no history lines and does not print an
   `и ещё ... ранее.` line
-
-### Requirement: Greeting number counts the full history
-The greeting number reported after the history (`Это приветствие номер N.`)
-SHALL reflect the total number of greetings in the history plus the current
-one, regardless of how many history lines were actually printed.
-
-#### Scenario: Greeting number with a truncated history
-- **WHEN** the greeting history file contains 8 lines and a new greeting is
-  being made
-- **THEN** the system reports `Это приветствие номер 9.` even though only 5
-  history lines and the "и ещё" summary were printed
