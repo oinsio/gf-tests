@@ -146,6 +146,68 @@ class HelloWorldSpec extends Specification {
         output.toString().contains("Это приветствие номер 3.")
     }
 
+    def "run prints only the last 5 greetings when history is longer than 5"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..8).each { HelloWorld.appendGreeting("Hello, World! #${it}", outputFile) }
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        def lines = output.toString().readLines()
+        !lines.any { it.contains("#1") || it.contains("#2") || it.contains("#3") }
+        (4..8).every { n -> lines.any { it.contains("#${n}") } }
+        lines.indexOf(lines.find { it.contains("#4") }) < lines.indexOf(lines.find { it.contains("#5") })
+    }
+
+    def "run prints и ещё N ранее summary when history exceeds 5 entries"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..8).each { HelloWorld.appendGreeting("Hello, World! #${it}", outputFile) }
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("и ещё 3 ранее")
+    }
+
+    def "run does not print и ещё N ранее when history has 5 or fewer entries"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..count).each { HelloWorld.appendGreeting("Hello, World! #${it}", outputFile) }
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        !output.toString().contains("ранее")
+
+        where:
+        count << [0, 5]
+    }
+
+    def "run reports the correct greeting number when history exceeds 5 entries"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        (1..8).each { HelloWorld.appendGreeting("Hello, World! #${it}", outputFile) }
+
+        when:
+        HelloWorld.run(input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("Это приветствие номер 9.")
+    }
+
     def "readHistory returns an empty list when the file does not exist"() {
         given:
         def file = tempDir.resolve("missing.txt")

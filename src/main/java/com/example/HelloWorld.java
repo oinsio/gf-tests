@@ -17,12 +17,18 @@ public class HelloWorld {
         run(System.in, System.out, GREETINGS_FILE);
     }
 
+    private static final int HISTORY_DISPLAY_LIMIT = 5;
+
     static void run(InputStream in, PrintStream out, Path outputFile) throws IOException {
         out.println(GREETING);
 
         List<String> history = readHistory(outputFile);
         out.println("История приветствий:");
-        history.forEach(out::println);
+        if (history.size() > HISTORY_DISPLAY_LIMIT) {
+            out.println("и ещё " + (history.size() - HISTORY_DISPLAY_LIMIT) + " ранее");
+        }
+        history.subList(Math.max(0, history.size() - HISTORY_DISPLAY_LIMIT), history.size())
+                .forEach(out::println);
         out.println("Это приветствие номер " + (history.size() + 1) + ".");
 
         out.println("Save greeting to file? (yes/no)");
