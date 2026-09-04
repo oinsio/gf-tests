@@ -1,0 +1,59 @@
+purpose: archive this task's completed OpenSpec change and fold its spec deltas into openspec/specs/
+inputs:
+  - kind: source
+  - kind: internal
+    producerOutputId: openspec-change
+  - kind: internal
+    producerOutputId: implementation-diff
+outputs:
+  - id: archived-change
+executor:
+  type: agent-cli
+  model: sonnet
+  settings:
+    maxTurns: 12
+    roundTimeout: 600s
+    allowedTools:
+      - Read
+      - Glob
+      - Grep
+      - Edit
+      - Write
+      - Bash
+    disallowedTools:
+      - Agent
+      - ScheduleWakeup
+      - SendMessage
+      - ToolSearch
+      - WebFetch
+      - WebSearch
+instructions: stages/archive/instructions.md
+verify:
+  - type: command
+    command: >-
+      if find openspec/changes -mindepth 1 -maxdepth 1 -type d ! -name archive | grep .;
+      then echo "the change directories listed above are still active - archive each one with:
+      openspec archive <name> --yes"; exit 1; fi
+  - type: command
+    command: openspec validate --specs --strict --no-interactive
+  - type: command
+    command: openspec validate --archived --no-interactive
+  - type: command
+    command: ./gradlew test --console=plain
+  - type: judge
+    criteriaFile: stages/archive/acceptance.md
+    model: sonnet
+    settings:
+      maxTurns: 10
+      disallowedTools:
+        - Bash
+        - Agent
+        - ScheduleWakeup
+        - SendMessage
+        - ToolSearch
+        - Edit
+        - Write
+        - WebFetch
+        - WebSearch
+    votes: 1
+advancement: auto
