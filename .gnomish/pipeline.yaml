@@ -1,2 +1,3 @@
 stages:
+  - specify
   - implement

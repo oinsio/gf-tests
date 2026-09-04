@@ -1,16 +1,14 @@
-purpose: implement the OpenSpec change from the specify stage in the Java/Gradle/Spock codebase and keep the build green
+purpose: turn the task into one complete, validated OpenSpec change under openspec/changes/
 inputs:
   - kind: source
-  - kind: internal
-    producerOutputId: openspec-change
 outputs:
-  - id: implementation-diff
+  - id: openspec-change
 executor:
   type: agent-cli
   model: sonnet
   settings:
-    maxTurns: 30
-    roundTimeout: 900s
+    maxTurns: 40
+    roundTimeout: 1200s
     allowedTools:
       - Read
       - Glob
@@ -25,17 +23,16 @@ executor:
       - ToolSearch
       - WebFetch
       - WebSearch
-instructions: stages/implement/instructions.md
+instructions: stages/specify/instructions.md
 verify:
   - type: command
-    command: ./gradlew test --console=plain
-  - type: command
     command: >-
-      if grep -rn '^[[:space:]]*- \[ \]' openspec/changes --include=tasks.md --exclude-dir=archive;
-      then echo "the tasks listed above are still open - do them, then tick them in tasks.md";
-      exit 1; fi
+      find openspec/changes -mindepth 1 -maxdepth 1 -type d ! -name archive | grep -q .
+      || { echo "no OpenSpec change was created under openspec/changes/"; exit 1; }
+  - type: command
+    command: openspec validate --changes --strict --no-interactive
   - type: judge
-    criteriaFile: stages/implement/acceptance.md
+    criteriaFile: stages/specify/acceptance.md
     model: sonnet
     settings:
       maxTurns: 10
