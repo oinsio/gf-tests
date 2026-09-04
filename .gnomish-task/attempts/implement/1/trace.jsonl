@@ -1,0 +1,4 @@
+{"seq":0,"tool":"Read","start":"2026-09-04T04:21:26.097268Z","durationMillis":5}
+{"seq":1,"tool":"Bash","start":"2026-09-04T04:21:26.490571Z","durationMillis":410}
+{"seq":2,"tool":"Edit","start":"2026-09-04T04:21:34.863543Z","durationMillis":6}
+{"seq":3,"tool":"Edit","start":"2026-09-04T04:21:39.322965Z","durationMillis":5}
