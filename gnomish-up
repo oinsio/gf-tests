@@ -1,32 +1,43 @@
 #!/usr/bin/env bash
 # Starts the factory daemon and its dashboard with one command.
 #
-# Equivalent to running these two side by side, in two terminals:
+# Equivalent to running these three side by side, in three terminals:
 #   ./gnomish dashboard --watch --out=logs/dashboard.html
+#   tail -F ~/.gnomish/logs/gnomish.log
 #   ./gnomish serve --slots=1
 #
-# The dashboard renderer goes to the background (its render log lands in
-# logs/dashboard-render.log), the daemon stays in the foreground, so its output is
-# what you see and Ctrl-C stops both — the daemon drains its in-flight slots the
-# same way it does on its own, then the renderer is torn down with it.
+# The dashboard renderer and the log follower go to the background, the daemon stays
+# in the foreground, so its output is what you see and Ctrl-C stops all three — the
+# daemon drains its in-flight slots the same way it does on its own, then the other
+# two are torn down with it.
+#
+# The log follower is there because the daemon's console carries only WARN and above:
+# the INFO narrative — what each gnome is doing, stage by stage — only ever reaches
+# ~/.gnomish/logs/gnomish.log. Without it a healthy run looks like a silent terminal.
 #
 #   ./gnomish-up                 # 1 slot, opens the dashboard in a browser
 #   ./gnomish-up --slots=4       # any serve flag is passed straight through
-#   ./gnomish-up --drain --no-open
+#   ./gnomish-up --drain --no-open --no-logs
 #
-# --no-open is this script's own flag (skip the browser); everything else belongs
-# to `gnomish serve`. --slots=1 is only a default: pass your own and yours is used.
+# --no-open (skip the browser) and --no-logs (skip the log follower) are this script's
+# own flags; everything else belongs to `gnomish serve`. --slots=1 is only a default:
+# pass your own and yours is used.
 set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dashboard_out="${GNOMISH_DASHBOARD_OUT:-$project_dir/logs/dashboard.html}"
 dashboard_log="${GNOMISH_DASHBOARD_LOG:-$project_dir/logs/dashboard-render.log}"
+# The same default the factory's logback config uses, and the same override name, so the
+# follower cannot end up watching a file the daemon is not writing to.
+factory_log="${GNOMISH_LOG_DIR:-$HOME/.gnomish/logs}/gnomish.log"
 
 open_browser=1
+follow_logs=1
 serve_args=()
 for arg in "$@"; do
     case "$arg" in
         --no-open) open_browser=0 ;;
+        --no-logs) follow_logs=0 ;;
         *) serve_args+=("$arg") ;;
     esac
 done
@@ -43,20 +54,46 @@ if [[ $has_slots -eq 0 ]]; then
     serve_args=(--slots=1 ${serve_args[@]+"${serve_args[@]}"})
 fi
 
-mkdir -p "$(dirname "$dashboard_out")" "$(dirname "$dashboard_log")"
+mkdir -p "$(dirname "$dashboard_out")" "$(dirname "$dashboard_log")" "$(dirname "$factory_log")"
 
 "$project_dir/gnomish" dashboard --watch --out="$dashboard_out" >"$dashboard_log" 2>&1 &
 dashboard_pid=$!
+logs_pid=""
+
+stop_pid() {
+    local pid="$1"
+    [[ -n "$pid" ]] || return 0
+    if kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+    fi
+}
 
 cleanup() {
-    if kill -0 "$dashboard_pid" 2>/dev/null; then
-        kill "$dashboard_pid" 2>/dev/null || true
-        wait "$dashboard_pid" 2>/dev/null || true
-    fi
+    stop_pid "$dashboard_pid"
+    stop_pid "$logs_pid"
 }
 trap cleanup EXIT INT TERM
 
 echo "gnomish-up: dashboard renderer pid $dashboard_pid -> $dashboard_out (log: $dashboard_log)"
+
+if [[ $follow_logs -eq 1 ]]; then
+    # -n 0: start at the end, this run's narrative only, not yesterday's.
+    # -F: follow by name, so the follower survives logback rolling the file at 10MB or midnight.
+    # The WARN/ERROR drop is what keeps the terminal honest: those two levels are already on
+    # the daemon's own console, and printing them again would read as two separate incidents.
+    # The filter is anchored on the log pattern's level field, so if that pattern ever changes
+    # it stops matching and every line is passed through — noisier, never quieter.
+    # The filter hangs off tail through a process substitution rather than a pipeline so that
+    # $! is the tail itself: a pipeline would hand back the grep, and the tail behind it would
+    # outlive this script holding the terminal open, since it only learns its reader is gone on
+    # the next write — which on an idle daemon may never come. Killing the tail closes the
+    # substitution, and the filter exits on EOF by itself.
+    tail -n 0 -F "$factory_log" 2>/dev/null \
+        > >(grep --line-buffered -Ev '\] (WARN|ERROR) +\[taskId=') &
+    logs_pid=$!
+    echo "gnomish-up: following $factory_log (INFO and below; WARN+ comes from the daemon itself)"
+fi
 
 # Wait for the first render before touching the browser: opening the tab on a file
 # that is not there yet gives the operator a 404-ish blank page for no reason.

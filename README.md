@@ -56,16 +56,24 @@ never falls back to the plain variable — the provider is deliberately fail-clo
 ./gnomish-up
 ```
 
-Starts the factory daemon and its dashboard together: the dashboard renderer runs in
-the background (`logs/dashboard.html`, re-rendered every 10 s, opened in a browser
-once) and `gnomish serve` runs in the foreground, so Ctrl-C stops both.
+Starts three things at once and stops them all on Ctrl-C:
 
-Flags are passed through to `gnomish serve` (`./gnomish-up --slots=4 --drain`);
-`--no-open` skips the browser. The pieces are still available separately:
+- the dashboard renderer in the background — `logs/dashboard.html`, re-rendered every
+  10 s, opened in a browser once;
+- a follower on the factory log, `~/.gnomish/logs/gnomish.log`, streamed into the same
+  terminal. The daemon's own console carries only `WARN` and above, so this is where the
+  INFO narrative of a healthy run comes from; those two levels are filtered out of the
+  follower to keep them from appearing twice;
+- `gnomish serve` in the foreground.
+
+Flags are passed through to `gnomish serve` (`./gnomish-up --slots=4 --drain`); `--no-open`
+skips the browser and `--no-logs` the log follower. The pieces are still available
+separately:
 
 ```bash
 ./gnomish serve --slots=1
 ./gnomish dashboard --watch --out=logs/dashboard.html
+tail -F ~/.gnomish/logs/gnomish.log
 ```
 
 ## Run tests
