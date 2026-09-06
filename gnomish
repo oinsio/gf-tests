@@ -9,11 +9,57 @@
 # Both are plain defaults: pass your own --dir=... or --factory.bindings.default-binding=container
 # and yours wins (last flag on the Spring command line takes precedence).
 #
+# Secrets use the factory's own file indirection (EnvFileSecretsProvider): for a secret N it
+# reads N_FILE as a path and takes the file's contents, so the token itself never enters this
+# process's environment table. All this script does is point N_FILE at the local file. The
+# files live OUTSIDE the clone — with binding=host the gnome runs in this working tree, and a
+# token in the tree is one it can read and one you can commit — and they are per project:
+# ~/.gnomish/secrets/<project>, keyed by this clone's directory name, the same way the factory
+# keys ~/.gnomish/worktrees/<project>. One token per project, revocable on its own.
+#
+#   mkdir -p ~/.gnomish/secrets/gf-tests
+#   install -m 600 /dev/null ~/.gnomish/secrets/gf-tests/github-token
+#   # paste the token in, no quotes and no KEY= prefix — the file IS the value
+#
+# GNOMISH_SECRETS_DIR moves the directory; GNOMISH_GITHUB_TOKEN_FILE names one file directly;
+# an already-exported GNOMISH_GITHUB_TOKEN still works and is left alone.
+#
 #   ./gnomish run --task="..." --mode=in-place --interactive
 #   ./gnomish status --task=<id>
 set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Keyed by the clone directory's own name, exactly as the factory keys its worktrees root
+# (operator-guide-run.md: ~/.gnomish/worktrees/<project-name>/...), so two clones served by
+# one factory never share a token by accident.
+secrets_dir="${GNOMISH_SECRETS_DIR:-$HOME/.gnomish/secrets/$(basename "$project_dir")}"
+
+# Point <SECRET>_FILE at the local file, but only when that file is actually there: the
+# provider is fail-closed, so a _FILE naming a missing path resolves the secret as ABSENT
+# instead of falling back to the plain variable — pointing it at nothing would break an
+# operator who exports the token the old way.
+point_at_file() {
+    local var="$1" file="$2"
+    [[ -f "$file" ]] || return 0
+    if [[ -n "${!var:-}" ]]; then
+        return 0  # an explicit path from the caller wins over the convention
+    fi
+    local perms
+    perms="$(stat -f %Lp "$file" 2>/dev/null || stat -c %a "$file" 2>/dev/null || echo "600")"
+    if [[ "${perms: -2}" != "00" ]]; then
+        echo "gnomish: $file is mode $perms — it holds a token, run: chmod 600 $file" >&2
+    fi
+    export "$var=$file"
+}
+
+point_at_file GNOMISH_GITHUB_TOKEN_FILE "$secrets_dir/github-token"
+point_at_file GNOMISH_GITHUB_ACTIONS_TOKEN_FILE "$secrets_dir/github-actions-token"
+
+if [[ -z "${GNOMISH_GITHUB_TOKEN_FILE:-}" && -z "${GNOMISH_GITHUB_TOKEN:-}" \
+      && "${1:-}" != "--help" && "${1:-}" != "-h" ]]; then
+    echo "gnomish: no $secrets_dir/github-token and no GNOMISH_GITHUB_TOKEN — tracker calls will fail" >&2
+fi
 
 exec java -jar "$project_dir/gnomish.jar" \
     --dir="$project_dir" \

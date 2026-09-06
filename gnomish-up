@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Starts the factory daemon and its dashboard with one command.
+#
+# Equivalent to running these two side by side, in two terminals:
+#   ./gnomish dashboard --watch --out=logs/dashboard.html
+#   ./gnomish serve --slots=1
+#
+# The dashboard renderer goes to the background (its render log lands in
+# logs/dashboard-render.log), the daemon stays in the foreground, so its output is
+# what you see and Ctrl-C stops both — the daemon drains its in-flight slots the
+# same way it does on its own, then the renderer is torn down with it.
+#
+#   ./gnomish-up                 # 1 slot, opens the dashboard in a browser
+#   ./gnomish-up --slots=4       # any serve flag is passed straight through
+#   ./gnomish-up --drain --no-open
+#
+# --no-open is this script's own flag (skip the browser); everything else belongs
+# to `gnomish serve`. --slots=1 is only a default: pass your own and yours is used.
+set -euo pipefail
+
+project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dashboard_out="${GNOMISH_DASHBOARD_OUT:-$project_dir/logs/dashboard.html}"
+dashboard_log="${GNOMISH_DASHBOARD_LOG:-$project_dir/logs/dashboard-render.log}"
+
+open_browser=1
+serve_args=()
+for arg in "$@"; do
+    case "$arg" in
+        --no-open) open_browser=0 ;;
+        *) serve_args+=("$arg") ;;
+    esac
+done
+
+# `--slots` is a real CLI flag, not a Spring property, so a second one is a usage
+# error rather than an override — only default it when the caller left it out.
+has_slots=0
+for arg in ${serve_args[@]+"${serve_args[@]}"}; do
+    case "$arg" in
+        --slots|--slots=*) has_slots=1 ;;
+    esac
+done
+if [[ $has_slots -eq 0 ]]; then
+    serve_args=(--slots=1 ${serve_args[@]+"${serve_args[@]}"})
+fi
+
+mkdir -p "$(dirname "$dashboard_out")" "$(dirname "$dashboard_log")"
+
+"$project_dir/gnomish" dashboard --watch --out="$dashboard_out" >"$dashboard_log" 2>&1 &
+dashboard_pid=$!
+
+cleanup() {
+    if kill -0 "$dashboard_pid" 2>/dev/null; then
+        kill "$dashboard_pid" 2>/dev/null || true
+        wait "$dashboard_pid" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT INT TERM
+
+echo "gnomish-up: dashboard renderer pid $dashboard_pid -> $dashboard_out (log: $dashboard_log)"
+
+# Wait for the first render before touching the browser: opening the tab on a file
+# that is not there yet gives the operator a 404-ish blank page for no reason.
+for _ in $(seq 1 60); do
+    [[ -s "$dashboard_out" ]] && break
+    kill -0 "$dashboard_pid" 2>/dev/null || break
+    sleep 0.5
+done
+
+if ! kill -0 "$dashboard_pid" 2>/dev/null; then
+    echo "gnomish-up: the dashboard renderer exited early, see $dashboard_log — starting the daemon anyway" >&2
+elif [[ ! -s "$dashboard_out" ]]; then
+    echo "gnomish-up: no page rendered within 30s, see $dashboard_log — starting the daemon anyway" >&2
+elif [[ $open_browser -eq 1 ]] && command -v open >/dev/null 2>&1; then
+    open "file://$dashboard_out"
+fi
+
+echo "gnomish-up: starting the daemon — ./gnomish serve ${serve_args[*]}"
+
+set +e
+"$project_dir/gnomish" serve ${serve_args[@]+"${serve_args[@]}"}
+serve_status=$?
+set -e
+exit "$serve_status"
