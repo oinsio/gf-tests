@@ -29,7 +29,7 @@ public class HelloWorld {
         out.println(greeting);
 
         List<String> history = readHistory(outputFile);
-        out.println("История приветствий:");
+        out.println("Greeting history:");
         int hiddenCount = history.size() - HISTORY_DISPLAY_LIMIT;
         List<String> displayedHistory = hiddenCount > 0
                 ? history.subList(hiddenCount, history.size())
@@ -38,9 +38,9 @@ public class HelloWorld {
         Collections.reverse(reversedHistory);
         reversedHistory.forEach(out::println);
         if (hiddenCount > 0) {
-            out.println("и ещё " + hiddenCount + " ранее.");
+            out.println("and " + hiddenCount + " more earlier.");
         }
-        out.println("Это приветствие номер " + (history.size() + 1) + ".");
+        out.println("This is greeting number " + (history.size() + 1) + ".");
 
         out.println("Save greeting to file? (yes/no)");
 

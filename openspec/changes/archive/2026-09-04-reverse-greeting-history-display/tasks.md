@@ -2,7 +2,7 @@
 
 - [x] 1.1 In `HelloWorld.run`, reverse the `displayedHistory` slice before
       printing so the most recent entry prints first, and move the
-      `и ещё N ранее.` print statement to after the displayed lines. Verify
+      `and N more earlier.` print statement to after the displayed lines. Verify
       with `HelloWorldSpec`: "should print history newest first when history
       exceeds the display limit".
 - [x] 1.2 Verify the greeting-number output and history selection (which

@@ -11,11 +11,11 @@ many older greetings exist.
 - When printing the greeting history, show only the last 5 entries (the 5 most
   recent, in chronological order).
 - If the history has more than 5 entries, print a summary line before the
-  listed entries: `и ещё N ранее.`, where N is the number of older entries not
+  listed entries: `and N more earlier.`, where N is the number of older entries not
   shown.
 - If the history has 5 or fewer entries, print all of them and omit the
   summary line (current behavior, unchanged).
-- The greeting number reported at the end (`Это приветствие номер N.`) keeps
+- The greeting number reported at the end (`This is greeting number N.`) keeps
   counting the full history, not just the displayed slice.
 
 ## Capabilities

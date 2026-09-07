@@ -1,55 +1,55 @@
-# Быстрый старт
+# Quick start
 
-Инструкция по сборке, запуску и проверке результатов проекта `jetbrains-air-tests`.
+Instructions for building, running, and checking the results of the `jetbrains-air-tests` project.
 
-## 1. Как собрать проект
+## 1. How to build the project
 
 ```bash
 ./gradlew build
 ```
 
-Команда скомпилирует исходный код, соберёт тестовые Spock-спецификации и выполнит тесты. Используется обёртка Gradle (`gradlew`), поэтому устанавливать Gradle отдельно не нужно — версия зафиксирована в `gradle/wrapper`.
+The command compiles the source code, builds the Spock test specifications, and runs the tests. The Gradle wrapper (`gradlew`) is used, so there's no need to install Gradle separately — the version is pinned in `gradle/wrapper`.
 
-## 2. Как запустить проект
+## 2. How to run the project
 
 ```bash
 ./gradlew run
 ```
 
-Запускает приложение через плагин `application`. Точка входа — класс `com.example.HelloWorld` (см. `mainClass` в `build.gradle`).
+Runs the application via the `application` plugin. The entry point is the `com.example.HelloWorld` class (see `mainClass` in `build.gradle`).
 
-Приложение интерактивное:
+The application is interactive:
 
-1. Печатает `Hello, World!` в консоль.
-2. Выводит историю предыдущих приветствий (если файл `greetings.txt` уже существует) и номер текущего приветствия.
-3. Спрашивает `Save greeting to file? (yes/no)` и ждёт ввод пользователя. Ответы `yes`, `y` или `да` (регистр не важен) сохраняют приветствие в `greetings.txt`, любой другой ответ (включая пустой) — нет.
+1. Prints `Hello, World!` to the console.
+2. Prints the history of previous greetings (if the `greetings.txt` file already exists) and the number of the current greeting.
+3. Asks `Save greeting to file? (yes/no)` and waits for user input. The answers `yes`, `y`, or `да` (case-insensitive) save the greeting to `greetings.txt`; any other answer (including an empty one) does not.
 
-Чтобы ответить на вопрос через `./gradlew run`, передайте ответ на stdin, например:
+To answer the question via `./gradlew run`, pass the answer on stdin, for example:
 
 ```bash
 echo yes | ./gradlew run --console=plain -q
 ```
 
-## 3. Где смотреть результаты запуска
+## 3. Where to look for the run results
 
-- **Вывод приложения** — прямо в консоли после `./gradlew run`.
-- **Результаты тестов**:
+- **Application output** — right in the console after `./gradlew run`.
+- **Test results**:
   ```bash
   ./gradlew test
   ```
-  - HTML-отчёт: `build/reports/tests/test/index.html`
-  - XML-отчёты (для CI): `build/test-results/test/`
-- **Собранные артефакты** (classes, jar и т.п.) — в каталоге `build/`.
-- **История приветствий** — файл `greetings.txt` в корне проекта. Он создаётся/дополняется только при положительном ответе на вопрос сохранения (см. п. 2) и не создаётся автоматически при запуске.
+  - HTML report: `build/reports/tests/test/index.html`
+  - XML reports (for CI): `build/test-results/test/`
+- **Built artifacts** (classes, jar, etc.) — in the `build/` directory.
+- **Greeting history** — the `greetings.txt` file in the project root. It is created/appended to only on a positive answer to the save question (see item 2) and is not created automatically on run.
 
-## 4. Что ещё важно знать
+## 4. What else is worth knowing
 
-- **Java 25** — убедитесь, что установлена соответствующая JDK (`sourceCompatibility`/`targetCompatibility` в `build.gradle`).
-- **Структура проекта**:
+- **Java 25** — make sure the appropriate JDK is installed (`sourceCompatibility`/`targetCompatibility` in `build.gradle`).
+- **Project structure**:
   ```
-  src/main/java/com/example/   — исходный код приложения
-  src/test/groovy/com/example/ — Spock-спецификации (тесты)
-  openspec/                    — спецификации и конфигурация workflow (spec-driven development)
+  src/main/java/com/example/   — application source code
+  src/test/groovy/com/example/ — Spock specifications (tests)
+  openspec/                    — specs and workflow configuration (spec-driven development)
   ```
-- **Тестовый фреймворк** — Spock 2.4 (Groovy 4.0), запускается через JUnit Platform.
-- Каталог `build/` не хранится в репозитории — он создаётся при сборке и может быть безопасно удалён (`./gradlew clean`).
+- **Test framework** — Spock 2.4 (Groovy 4.0), run via the JUnit Platform.
+- The `build/` directory is not stored in the repository — it is created during the build and can be safely deleted (`./gradlew clean`).

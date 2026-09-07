@@ -9,11 +9,11 @@ block. Printing the history newest-first surfaces it immediately.
 - Reverse the order of the printed history lines so the most recent entry is
   printed first and the oldest of the displayed entries is printed last.
 - Keep showing at most the same number of entries as today (5).
-- Move the `и ещё N ранее.` summary line to after the displayed history lines,
+- Move the `and N more earlier.` summary line to after the displayed history lines,
   since it now refers to entries older than everything just shown above it.
 - When the history is empty, print no history lines and no summary line
   (unchanged).
-- The greeting number reported at the end (`Это приветствие номер N.`)
+- The greeting number reported at the end (`This is greeting number N.`)
   continues to count the full history, not just the displayed slice
   (unchanged).
 
@@ -21,7 +21,7 @@ block. Printing the history newest-first surfaces it immediately.
 
 ### Modified Capabilities
 - `greeting-history-display`: the display order of printed history lines and
-  the position of the "и ещё N ранее." summary line relative to them.
+  the position of the "and N more earlier." summary line relative to them.
 
 ## Impact
 

@@ -2,7 +2,7 @@
 
 `HelloWorld.run` currently takes the last `HISTORY_DISPLAY_LIMIT` (5) lines
 of `history` in file order (oldest first) and prints them as-is, with the
-`и ещё N ранее.` summary printed before them when truncated. See
+`and N more earlier.` summary printed before them when truncated. See
 `specs/greeting-history-display/spec.md` for the exact required behavior.
 
 ## Goals / Non-Goals
@@ -23,7 +23,7 @@ of `history` in file order (oldest first) and prints them as-is, with the
   calculation untouched. Reversing the already-sliced 5-entry list is
   simpler and cheaper than reversing the full history first and re-deriving
   the slice.
-- Move the `и ещё N ранее.` print statement to after the loop that prints
+- Move the `and N more earlier.` print statement to after the loop that prints
   `displayedHistory`, matching the new reading order (most recent first,
   then a note about what's further back/older, which now sits below).
 

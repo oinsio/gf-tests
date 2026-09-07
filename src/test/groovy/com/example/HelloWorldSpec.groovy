@@ -126,8 +126,8 @@ class HelloWorldSpec extends Specification {
         HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
-        output.toString().contains("История приветствий:")
-        output.toString().contains("Это приветствие номер 1.")
+        output.toString().contains("Greeting history:")
+        output.toString().contains("This is greeting number 1.")
     }
 
     def "run prints previous greetings from the history file and the correct greeting number"() {
@@ -143,7 +143,7 @@ class HelloWorldSpec extends Specification {
 
         then:
         output.toString().count("Hello, World!") == 3
-        output.toString().contains("Это приветствие номер 3.")
+        output.toString().contains("This is greeting number 3.")
     }
 
     def "readHistory returns an empty list when the file does not exist"() {
@@ -220,7 +220,7 @@ class HelloWorldSpec extends Specification {
 
         then:
         output.toString().contains("Hello, Alice!")
-        output.toString().contains("Это приветствие номер 2.")
+        output.toString().contains("This is greeting number 2.")
     }
 
     def "should print history newest first when history exceeds the display limit"() {
@@ -238,7 +238,7 @@ class HelloWorldSpec extends Specification {
         def displayed = lines.findAll { it.startsWith("Hello, Number") }
         displayed == ["Hello, Number 8!", "Hello, Number 7!", "Hello, Number 6!",
                        "Hello, Number 5!", "Hello, Number 4!"]
-        lines.indexOf("и ещё 3 ранее.") > lines.indexOf("Hello, Number 4!")
+        lines.indexOf("and 3 more earlier.") > lines.indexOf("Hello, Number 4!")
     }
 
     def "run prints all history entries newest first when there are 5 or fewer"() {
@@ -269,7 +269,7 @@ class HelloWorldSpec extends Specification {
         HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
-        output.toString().contains("и ещё 3 ранее.")
+        output.toString().contains("and 3 more earlier.")
     }
 
     def "run omits the hidden-count summary line when history has 5 or fewer entries"() {
@@ -283,7 +283,7 @@ class HelloWorldSpec extends Specification {
         HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
-        !output.toString().contains("ранее.")
+        !output.toString().contains("earlier.")
     }
 
     def "run omits the hidden-count summary line when history is empty"() {
@@ -296,7 +296,7 @@ class HelloWorldSpec extends Specification {
         HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
-        !output.toString().contains("ранее.")
+        !output.toString().contains("earlier.")
     }
 
     def "run reports the correct greeting number when history is truncated"() {
@@ -310,7 +310,7 @@ class HelloWorldSpec extends Specification {
         HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
 
         then:
-        output.toString().contains("Это приветствие номер 9.")
+        output.toString().contains("This is greeting number 9.")
     }
 
     def "should still report the total greeting count after reversing the display order"() {
@@ -327,7 +327,7 @@ class HelloWorldSpec extends Specification {
         def lines = output.toString().readLines()
         def displayed = lines.findAll { it.startsWith("Hello, Number") }
         displayed.size() == 5
-        output.toString().contains("Это приветствие номер 9.")
+        output.toString().contains("This is greeting number 9.")
     }
 
     def "run prints history newest first when there are fewer than 5 entries"() {
@@ -345,7 +345,7 @@ class HelloWorldSpec extends Specification {
         def lines = output.toString().readLines()
         def displayed = lines.findAll { it.startsWith("Hello, Number") }
         displayed == ["Hello, Number 2!", "Hello, Number 1!"]
-        !output.toString().contains("ранее.")
+        !output.toString().contains("earlier.")
     }
 
     def "main prints a personalized greeting when a name argument is supplied"() {
