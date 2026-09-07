@@ -16,6 +16,10 @@ repositories {
     mavenCentral()
 }
 
+run {
+    standardInput = System.in
+}
+
 dependencies {
     testImplementation 'org.spockframework:spock-core:2.4-groovy-4.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
