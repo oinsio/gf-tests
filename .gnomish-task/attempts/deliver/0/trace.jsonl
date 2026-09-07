@@ -1,0 +1,4 @@
+{"seq":0,"tool":"Bash","start":"2026-09-07T15:06:28.317774Z","durationMillis":375}
+{"seq":1,"tool":"Bash","start":"2026-09-07T15:06:31.343459Z","durationMillis":1561}
+{"seq":2,"tool":"Write","start":"2026-09-07T15:06:40.314131Z","durationMillis":15}
+{"seq":3,"tool":"Bash","start":"2026-09-07T15:06:42.142467Z","durationMillis":2817}
