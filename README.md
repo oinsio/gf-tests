@@ -15,6 +15,15 @@ Sandbox project for testing Java/Gradle/Spock setup for https://github.com/oinsi
 ./gradlew run
 ```
 
+or
+
+```bash
+./gradlew installDist -q
+./build/install/gf-tests/bin/gf-tests
+
+./build/install/gf-tests/bin/gf-tests Alice
+```
+
 Prints `Hello, World!`.
 
 ## Features
@@ -40,11 +49,11 @@ install -m 600 /dev/null ~/.gnomish/secrets/gf-tests/github-token
 # paste the token into the file — the whole file is the value, no KEY= prefix, no quotes
 ```
 
-| File                                              | Secret                          | Needed for                                                 |
-|---------------------------------------------------|---------------------------------|-------------------------------------------------------------|
-| `~/.gnomish/secrets/gf-tests/github-token`         | `GNOMISH_GITHUB_TOKEN`          | the tracker: issue read/write + label write                 |
-| `~/.gnomish/secrets/gf-tests/github-actions-token` | `GNOMISH_GITHUB_ACTIONS_TOKEN`  | a stage's GitHub Actions check (`actions: read`); optional  |
-| `~/.gnomish/secrets/gf-tests/github-pr-token`      | `GH_TOKEN`                      | the `deliver` stage: `gh pr create`/`gh pr edit`             |
+| File                                               | Secret                         | Needed for                                                 |
+|----------------------------------------------------|--------------------------------|------------------------------------------------------------|
+| `~/.gnomish/secrets/gf-tests/github-token`         | `GNOMISH_GITHUB_TOKEN`         | the tracker: issue read/write + label write                |
+| `~/.gnomish/secrets/gf-tests/github-actions-token` | `GNOMISH_GITHUB_ACTIONS_TOKEN` | a stage's GitHub Actions check (`actions: read`); optional |
+| `~/.gnomish/secrets/gf-tests/github-pr-token`      | `GH_TOKEN`                     | the `deliver` stage: `gh pr create`/`gh pr edit`           |
 
 The wrapper only points at a file that exists, so exporting `GNOMISH_GITHUB_TOKEN` in the
 shell still works. `GNOMISH_SECRETS_DIR` moves the directory, `GNOMISH_GITHUB_TOKEN_FILE`
@@ -56,12 +65,12 @@ never falls back to the plain variable — the provider is deliberately fail-clo
 `.gnomish/pipeline.yaml` runs four stages per task; each one's manifest, instructions and
 acceptance criteria live in `.gnomish/stages/<stage>/`:
 
-| Stage       | What it hands to the next one                                              |
-|-------------|----------------------------------------------------------------------------|
-| `specify`   | one validated OpenSpec change under `openspec/changes/`                      |
-| `implement` | the code and Spock specs it calls for, with `./gradlew test` green           |
-| `archive`   | that change archived, its spec deltas folded into `openspec/specs/`          |
-| `deliver`   | the pull request for the task branch, open against `main`                    |
+| Stage       | What it hands to the next one                                       |
+|-------------|---------------------------------------------------------------------|
+| `specify`   | one validated OpenSpec change under `openspec/changes/`             |
+| `implement` | the code and Spock specs it calls for, with `./gradlew test` green  |
+| `archive`   | that change archived, its spec deltas folded into `openspec/specs/` |
+| `deliver`   | the pull request for the task branch, open against `main`           |
 
 `deliver` writes no project files. It reads the branch, the repo from
 `tracker.github.repo` and the issue number from `.gnomish-task/task.json`, then opens the
