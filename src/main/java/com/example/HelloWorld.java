@@ -6,6 +6,9 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,6 +18,7 @@ public class HelloWorld {
     private static final String GREETING = "Hello, World!";
     private static final Path GREETINGS_FILE = Path.of("greetings.txt");
     private static final int HISTORY_DISPLAY_LIMIT = 5;
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public static void main(String[] args) throws IOException {
         if (List.of(args).contains("--stats")) {
@@ -22,6 +26,7 @@ public class HelloWorld {
             return;
         }
         run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
+        run(greetingFor(args), System.in, System.out, GREETINGS_FILE, Clock.systemDefaultZone());
     }
 
     static String greetingFor(String[] args) {
@@ -29,7 +34,7 @@ public class HelloWorld {
         return name.isEmpty() ? GREETING : "Hello, " + name + "!";
     }
 
-    static void run(String greeting, InputStream in, PrintStream out, Path outputFile) throws IOException {
+    static void run(String greeting, InputStream in, PrintStream out, Path outputFile, Clock clock) throws IOException {
         out.println(greeting);
 
         List<String> history = readHistory(outputFile);
@@ -52,7 +57,7 @@ public class HelloWorld {
         String answer = scanner.hasNextLine() ? scanner.nextLine() : "";
 
         if (isAffirmative(answer)) {
-            appendGreeting(greeting, outputFile);
+            appendGreeting(greeting, outputFile, clock);
         }
     }
 
@@ -69,8 +74,9 @@ public class HelloWorld {
         return "Hello, " + name + "!";
     }
 
-    static void appendGreeting(String greeting, Path file) throws IOException {
-        Files.writeString(file, greeting + System.lineSeparator(),
+    static void appendGreeting(String greeting, Path file, Clock clock) throws IOException {
+        String timestamp = LocalDateTime.now(clock).format(TIMESTAMP_FORMAT);
+        Files.writeString(file, timestamp + " " + greeting + System.lineSeparator(),
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 }
