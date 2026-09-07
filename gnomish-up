@@ -20,17 +20,24 @@
 #   ./gnomish-up                 # 1 slot, opens the dashboard in a browser
 #   ./gnomish-up --slots=4       # any serve flag is passed straight through
 #   ./gnomish-up --drain --no-open --no-logs
-#   ./gnomish-up --demo          # rewrite $HOME to ~ on screen, for a recording
+#   ./gnomish-up --demo          # recording mode: see below
+#   ./gnomish-up --demo --port=5500
 #
-# --no-open (skip the browser), --no-logs (skip the log follower) and --demo are this
-# script's own flags; everything else belongs to `gnomish serve`. --slots=1 is only a
+# --no-open (skip the browser), --no-logs (skip the log follower), --demo and --port are
+# this script's own flags; everything else belongs to `gnomish serve`. --slots=1 is only a
 # default: pass your own and yours is used.
 #
-# --demo only rewrites what this terminal prints: the log file keeps its absolute paths,
-# so debugging after the recording is unaffected. It covers this script's own messages,
-# the followed log and the daemon's console alike. This clone's path becomes `.` and the
-# rest of the home directory becomes `~`, so nothing on screen carries the username or
-# the folder layout above the project.
+# --demo is for a screen recording, and does two things. It rewrites what this terminal
+# prints — this clone's path becomes `.`, the rest of the home directory becomes `~` — so
+# nothing on screen carries the username or the folder layout above the project. The log
+# file keeps its absolute paths, so debugging afterwards is unaffected; the rewrite covers
+# this script's own messages, the followed log and the daemon's console alike.
+#
+# And it serves the dashboard over http instead of handing the browser a file:// path, so
+# the address bar reads http://localhost:8000 rather than the full path to this clone. The
+# server is python3's, bound to loopback (it exposes the whole logs/ directory, which has no
+# business leaving this machine), and --port moves it. With no --port and the default
+# taken, a busy port is stepped over rather than fatal — two factories can record at once.
 set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,22 +51,45 @@ factory_log="$GNOMISH_LOG_DIR/gnomish.log"
 
 open_browser=1
 follow_logs=1
-redact_home=0
+demo_mode=0
+dashboard_port="${GNOMISH_DASHBOARD_PORT:-8000}"
+port_explicit=0
+if [[ -n "${GNOMISH_DASHBOARD_PORT:-}" ]]; then
+    port_explicit=1
+fi
 serve_args=()
 for arg in "$@"; do
     case "$arg" in
         --no-open) open_browser=0 ;;
         --no-logs) follow_logs=0 ;;
-        --demo) redact_home=1 ;;
+        --demo) demo_mode=1 ;;
+        --port=*) dashboard_port="${arg#--port=}"; port_explicit=1 ;;
         *) serve_args+=("$arg") ;;
     esac
 done
+
+# A port someone named is the port they want: say so rather than quietly landing elsewhere.
+# The default is ours to move, and moving it is what lets a second factory record alongside
+# the first instead of failing to bind.
+if [[ $port_explicit -eq 1 ]]; then
+    port_candidates=("$dashboard_port")
+else
+    port_candidates=($(seq "$dashboard_port" $((dashboard_port + 9))))
+fi
+
+# Served over http the page is the directory index, so the address bar carries no file name
+# at all — the point of serving it. Only the default moves; an explicit GNOMISH_DASHBOARD_OUT
+# stays where the operator put it.
+if [[ $demo_mode -eq 1 && -z "${GNOMISH_DASHBOARD_OUT:-}" ]]; then
+    dashboard_out="$project_dir/logs/index.html"
+fi
+http_log="${GNOMISH_DASHBOARD_HTTP_LOG:-$project_dir/logs/dashboard-http.log}"
 
 # Everything this terminal shows goes through one rewrite, so the daemon's own console and
 # the followed log are covered by the same rule as the messages below — and nothing has to
 # remember to opt in. The file on disk is untouched: after the recording, the absolute paths
 # are still there to debug with.
-if [[ $redact_home -eq 1 ]]; then
+if [[ $demo_mode -eq 1 ]]; then
     # -l on BSD sed, -u on GNU: line buffering. Without it an idle daemon's output would sit
     # in a 4KB block buffer, and a demo would be watching a terminal that says nothing.
     if sed -l '' </dev/null >/dev/null 2>&1; then
@@ -93,6 +123,8 @@ mkdir -p "$(dirname "$dashboard_out")" "$(dirname "$dashboard_log")" "$(dirname 
 "$project_dir/gnomish" dashboard --watch --out="$dashboard_out" >"$dashboard_log" 2>&1 &
 dashboard_pid=$!
 logs_pid=""
+http_pid=""
+dashboard_url="file://$dashboard_out"
 
 stop_pid() {
     local pid="$1"
@@ -106,6 +138,7 @@ stop_pid() {
 cleanup() {
     stop_pid "$dashboard_pid"
     stop_pid "$logs_pid"
+    stop_pid "$http_pid"
 }
 trap cleanup EXIT INT TERM
 
@@ -137,12 +170,93 @@ for _ in $(seq 1 60); do
     sleep 0.5
 done
 
+# Serves the rendered page over http and points dashboard_url at it. Every failure here is
+# cosmetic — the page itself is already on disk — so each one falls back to file:// with a
+# note rather than keeping the operator from their daemon.
+# Ask python to bind the first free port itself and report which one it took. Probing a port
+# from the shell and starting the server after it leaves a window where the port is someone
+# else's by the time we look — and a port already serving something answers just as happily,
+# which would put a stranger's page on camera under our own URL.
+dashboard_server_py='
+import functools, http.server, socket, sys
+directory, ports = sys.argv[1], [int(p) for p in sys.argv[2:]]
+# Threaded, and with a deadline on a connection that says nothing. A browser opens a spare
+# socket next to the one it is fetching on and leaves it silent; a single-threaded server
+# accepts that socket and then blocks inside it waiting for a request line that never comes,
+# so every later request queues behind it and the tab spins on a blank page. It shows up
+# when two factories record side by side, because that is when the browser is handed two
+# tabs at once and keeps a spare connection open to one of them.
+handler_class = type("DashboardHandler", (http.server.SimpleHTTPRequestHandler,), {"timeout": 30})
+handler = functools.partial(handler_class, directory=directory)
+refused = []
+for port in ports:
+    # Bind whatever localhost resolves to first — ::1 on a stock macOS — so the address bar
+    # can read localhost and reach the server. Either way it is loopback: nothing published
+    # here leaves this machine.
+    family, _, _, _, address = socket.getaddrinfo("localhost", port, type=socket.SOCK_STREAM)[0]
+    server_class = type("LoopbackServer", (http.server.ThreadingHTTPServer,), {"address_family": family})
+    try:
+        httpd = server_class(address[:2], handler)
+    except OSError as unavailable:
+        refused.append("%d: %s" % (port, unavailable))
+        continue
+    print(port, flush=True)
+    httpd.serve_forever()
+sys.exit("no port to bind (" + "; ".join(refused) + ")")
+'
+
+# Serves the rendered page over http and points dashboard_url at it. Every failure here is
+# cosmetic — the page itself is already on disk — so each one falls back to file:// with a
+# note rather than keeping the operator from their daemon.
+start_dashboard_server() {
+    local doc_root url_path port waited
+    doc_root="$(dirname "$dashboard_out")"
+    url_path="$(basename "$dashboard_out")"
+    if [[ "$url_path" == "index.html" ]]; then
+        url_path=""
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "gnomish-up: no python3 to serve the dashboard over http — opening the file directly" >&2
+        return 1
+    fi
+
+    : >"$http_log"
+    python3 -c "$dashboard_server_py" "$doc_root" \
+        ${port_candidates[@]+"${port_candidates[@]}"} >"$http_log" 2>&1 &
+    http_pid=$!
+
+    port=""
+    for waited in $(seq 1 40); do
+        sleep 0.25
+        port="$(sed -n '1{/^[0-9][0-9]*$/p;}' "$http_log" 2>/dev/null)"
+        if [[ -n "$port" ]]; then
+            break
+        fi
+        kill -0 "$http_pid" 2>/dev/null || break
+    done
+
+    if [[ -z "$port" ]]; then
+        echo "gnomish-up: could not serve the dashboard over http, see $http_log — opening the file directly" >&2
+        stop_pid "$http_pid"
+        http_pid=""
+        return 1
+    fi
+
+    dashboard_url="http://localhost:$port/$url_path"
+    echo "gnomish-up: serving $doc_root at $dashboard_url (requests: $http_log)"
+}
+
 if ! kill -0 "$dashboard_pid" 2>/dev/null; then
     echo "gnomish-up: the dashboard renderer exited early, see $dashboard_log — starting the daemon anyway" >&2
 elif [[ ! -s "$dashboard_out" ]]; then
     echo "gnomish-up: no page rendered within 30s, see $dashboard_log — starting the daemon anyway" >&2
-elif [[ $open_browser -eq 1 ]] && command -v open >/dev/null 2>&1; then
-    open "file://$dashboard_out"
+else
+    if [[ $demo_mode -eq 1 ]]; then
+        start_dashboard_server || true
+    fi
+    if [[ $open_browser -eq 1 ]] && command -v open >/dev/null 2>&1; then
+        open "$dashboard_url"
+    fi
 fi
 
 echo "gnomish-up: starting the daemon — ./gnomish serve ${serve_args[*]}"

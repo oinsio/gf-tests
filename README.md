@@ -67,10 +67,15 @@ Starts three things at once and stops them all on Ctrl-C:
 - `gnomish serve` in the foreground.
 
 Flags are passed through to `gnomish serve` (`./gnomish-up --slots=4 --drain`); `--no-open`
-skips the browser, `--no-logs` the log follower, and `--demo` rewrites this clone's path to
-`.` and the rest of the home directory to `~` in everything the terminal prints — for a
-screen recording. The log file itself keeps its absolute paths, so debugging afterwards is
-unaffected. The pieces are still available
+skips the browser and `--no-logs` the log follower.
+
+`--demo` is for a screen recording. It keeps absolute paths off the screen twice over: in
+the terminal this clone's path is rewritten to `.` and the rest of the home directory to
+`~`, and the dashboard is served over http, so the address bar reads `http://localhost:8000`
+instead of a `file:///Users/...` path. `--port=5500` moves the port; without it a busy port
+is stepped over, so a second factory can record alongside the first. The server is python3's,
+bound to loopback, and it stops with everything else on Ctrl-C. The log file on disk keeps
+its absolute paths either way, so debugging after the recording is unaffected. The pieces are still available
 separately:
 
 ```bash
