@@ -44,11 +44,43 @@ install -m 600 /dev/null ~/.gnomish/secrets/gf-tests/github-token
 |---------------------------------------------------|---------------------------------|-------------------------------------------------------------|
 | `~/.gnomish/secrets/gf-tests/github-token`         | `GNOMISH_GITHUB_TOKEN`          | the tracker: issue read/write + label write                 |
 | `~/.gnomish/secrets/gf-tests/github-actions-token` | `GNOMISH_GITHUB_ACTIONS_TOKEN`  | a stage's GitHub Actions check (`actions: read`); optional  |
+| `~/.gnomish/secrets/gf-tests/github-pr-token`      | `GH_TOKEN`                      | the `deliver` stage: `gh pr create`/`gh pr edit`             |
 
 The wrapper only points at a file that exists, so exporting `GNOMISH_GITHUB_TOKEN` in the
 shell still works. `GNOMISH_SECRETS_DIR` moves the directory, `GNOMISH_GITHUB_TOKEN_FILE`
 names one file directly. A referenced-but-unreadable file resolves the secret as absent and
 never falls back to the plain variable — the provider is deliberately fail-closed.
+
+## Pipeline
+
+`.gnomish/pipeline.yaml` runs four stages per task; each one's manifest, instructions and
+acceptance criteria live in `.gnomish/stages/<stage>/`:
+
+| Stage       | What it hands to the next one                                              |
+|-------------|----------------------------------------------------------------------------|
+| `specify`   | one validated OpenSpec change under `openspec/changes/`                      |
+| `implement` | the code and Spock specs it calls for, with `./gradlew test` green           |
+| `archive`   | that change archived, its spec deltas folded into `openspec/specs/`          |
+| `deliver`   | the pull request for the task branch, open against `main`                    |
+
+`deliver` writes no project files. It reads the branch, the repo from
+`tracker.github.repo` and the issue number from `.gnomish-task/task.json`, then opens the
+pull request — or edits the one already there, so a retry never opens a second. The body it
+publishes is also left in `pr-body.md` (git-ignored): that file is what the stage's judge
+reads, and a command check fails the stage unless it matches what GitHub actually shows. The
+body references the task with `Refs #N`, never `Closes` — closing the issue stays yours.
+
+Both the gnome's round and that stage's checks call `gh`, which reads `GH_TOKEN`. The tracker's
+own `GNOMISH_GITHUB_TOKEN` cannot serve: the factory declares it a credential, so it is scrubbed
+from every child environment and refused in the passthrough allowlist. `./gnomish` therefore
+exports `GH_TOKEN` from `github-pr-token`, falling back to `github-token`, and passes the name
+through with `--factory.sandbox.env-passthrough=GH_TOKEN`. On that fallback the gnome holds a
+token with the tracker's rights — it can write issues and labels as you; a fine-grained token
+scoped to Contents + Pull requests in `github-pr-token` keeps it to what the stage needs.
+
+Pipeline law freezes at the base of a task's branch, so `deliver` applies to tasks branched
+after this change reaches `main` — anything already in flight finishes on the three-stage
+pipeline it started with.
 
 ## Run the factory
 
@@ -75,8 +107,18 @@ the terminal this clone's path is rewritten to `.` and the rest of the home dire
 instead of a `file:///Users/...` path. `--port=5500` moves the port; without it a busy port
 is stepped over, so a second factory can record alongside the first. The server is python3's,
 bound to loopback, and it stops with everything else on Ctrl-C. The log file on disk keeps
-its absolute paths either way, so debugging after the recording is unaffected. The pieces are still available
-separately:
+its absolute paths either way, so debugging after the recording is unaffected.
+
+It also compacts every log line for a terminal a quarter of a screen wide. The ~130 columns of
+prefix a line arrives with — date, thread, level, four MDC field names, an abbreviated logger —
+become the clock and the context that actually changes, `10:47:41 [#34 specify/0] round
+started: ...`; the tracker id shrinks to its issue number, `claude-sonnet-5` to `sonnet`, a
+`TokenUsage[...]` record to `40→5293`; Spring's boot lines, the plugin inventory and stack-trace
+frames are dropped, the exception line above them kept. Only recognisable log lines are touched,
+so an unfamiliar line prints as it arrived. `--no-compact` turns this off and keeps the path
+rewriting; the file on disk is verbatim either way.
+
+The pieces are still available separately:
 
 ```bash
 ./gnomish serve --slots=1

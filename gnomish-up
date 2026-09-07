@@ -23,15 +23,26 @@
 #   ./gnomish-up --demo          # recording mode: see below
 #   ./gnomish-up --demo --port=5500
 #
-# --no-open (skip the browser), --no-logs (skip the log follower), --demo and --port are
-# this script's own flags; everything else belongs to `gnomish serve`. --slots=1 is only a
-# default: pass your own and yours is used.
+# --no-open (skip the browser), --no-logs (skip the log follower), --demo, --no-compact and
+# --port are this script's own flags; everything else belongs to `gnomish serve`. --slots=1 is
+# only a default: pass your own and yours is used.
 #
-# --demo is for a screen recording, and does two things. It rewrites what this terminal
+# --demo is for a screen recording, and does three things. It rewrites what this terminal
 # prints — this clone's path becomes `.`, the rest of the home directory becomes `~` — so
 # nothing on screen carries the username or the folder layout above the project. The log
 # file keeps its absolute paths, so debugging afterwards is unaffected; the rewrite covers
 # this script's own messages, the followed log and the daemon's console alike.
+#
+# It also compacts every log line for a terminal a quarter of a screen wide (--no-compact
+# turns this half off and keeps the path rewriting). A line arrives ~130 columns of prefix
+# before its first word — date, thread, level, four MDC field names, a package-abbreviated
+# logger — none of which changes often enough to earn that space on camera. What is left is
+# the clock and the context that does change: `10:47:41 [#34 specify/0] round started: ...`.
+# The rules only shorten what is recognisably a log line; anything else passes through
+# untouched, so a format change makes the output verbose, never silent. The same goes for
+# the whole-line drops: Spring's own boot lines, the plugin inventory (180 of the 310 lines
+# in a typical file) and stack-trace frames — the exception line itself stays, and the file
+# on disk keeps every frame.
 #
 # And it serves the dashboard over http instead of handing the browser a file:// path, so
 # the address bar reads http://localhost:8000 rather than the full path to this clone. The
@@ -52,6 +63,7 @@ factory_log="$GNOMISH_LOG_DIR/gnomish.log"
 open_browser=1
 follow_logs=1
 demo_mode=0
+compact_logs=1
 dashboard_port="${GNOMISH_DASHBOARD_PORT:-8000}"
 port_explicit=0
 if [[ -n "${GNOMISH_DASHBOARD_PORT:-}" ]]; then
@@ -63,6 +75,7 @@ for arg in "$@"; do
         --no-open) open_browser=0 ;;
         --no-logs) follow_logs=0 ;;
         --demo) demo_mode=1 ;;
+        --no-compact) compact_logs=0 ;;
         --port=*) dashboard_port="${arg#--port=}"; port_explicit=1 ;;
         *) serve_args+=("$arg") ;;
     esac
@@ -93,17 +106,64 @@ if [[ $demo_mode -eq 1 ]]; then
     # -l on BSD sed, -u on GNU: line buffering. Without it an idle daemon's output would sit
     # in a 4KB block buffer, and a demo would be watching a terminal that says nothing.
     if sed -l '' </dev/null >/dev/null 2>&1; then
-        redact=(sed -l)
+        line_buffered=(-l)
     else
-        redact=(sed -u)
+        line_buffered=(-u)
     fi
     # Substitute a path prefix only where the path actually ends, or a sibling clone whose
     # name starts with this one's — gf-tests-demo next to gf-tests — comes out as `.-demo`.
     # The clone first, the home directory second: the clone lives inside the home directory,
     # so rewriting the home directory first would leave the longer path unmatched.
     boundary_sub() { printf '%s' "s|$1\\([^-A-Za-z0-9_.]\\)|$2\\1|g;s|$1\$|$2|g"; }
+    redact=(sed ${line_buffered[@]+"${line_buffered[@]}"})
     redact+=(-e "$(boundary_sub "$project_dir" .)" -e "$(boundary_sub "$HOME" '~')")
-    exec > >("${redact[@]}") 2> >("${redact[@]}" >&2)
+
+    # The compactor runs first and knows nothing about paths; redaction stays BRE and knows
+    # nothing about the log format. Two passes, so neither set of rules can surprise the other.
+    # Every rule here is a shortening of something recognisable: a line that does not match
+    # any of them is printed exactly as it arrived, which is the failure direction to be on.
+    compact=(cat)
+    if [[ $compact_logs -eq 1 ]]; then
+        compact=(sed -E ${line_buffered[@]+"${line_buffered[@]}"}
+            # Spring's own boot lines and the plugin inventory: one-time startup detail, and
+            # in a typical log file the inventory alone is more than half of every line in it.
+            -e '/ProviderDiscoveryReport - /d'
+            -e '/FactoryApplication - (Starting|Started|No active profile)/d'
+            # A stack trace is thirty frames of screen for one incident. The exception line
+            # above it survives; the frames stay in the file, which is where they get read.
+            -e '/^[[:space:]]+at [A-Za-z0-9_.$]+[.(]/d'
+            -e '/^[[:space:]]+\.\.\. [0-9]+ more$/d'
+            # The prefix. Date, thread, logger and the four MDC field names go; the clock and
+            # the context that actually changes stay: 130 columns become about 20.
+            -e 's/^[0-9]{4}-[0-9]{2}-[0-9]{2} ([0-9]{2}:[0-9]{2}:[0-9]{2}),[0-9]{3} \[[^]]*\] ([A-Z]+) +\[taskId=([^,]*), stage=([^,]*), attempt=([^],]*), component=[^]]*\] [^ ]+ - /\1 \2 [\3 \4\/\5] /'
+            # INFO is everything the follower carries, so it says nothing; WARN and ERROR keep
+            # their word precisely because they are the exception.
+            -e 's/^([0-9:]{8}) INFO /\1 /'
+            # An empty context field still leaves its separators: [ /] disappears entirely,
+            # [#34 /] and [#34 specify/] lose the empty tail.
+            -e 's/^([0-9:]{8} )([A-Z]+ )?\[ \/\] /\1\2/'
+            -e 's/^([0-9:]{8} )([A-Z]+ )?\[([^]]+) \/\] /\1\2[\3] /'
+            -e 's/^([0-9:]{8} )([A-Z]+ )?\[([^]]+)\/\] /\1\2[\3] /'
+            # The tracker id is the same 25 characters on every line of a run — in the context,
+            # in the thread name, and again inside half the messages. Its issue number is not.
+            -e 's/github:[A-Za-z0-9._\/-]+#/#/g'
+            # Model ids, token records, durations, session ids and fully qualified class names,
+            # each written the way a person would say it out loud.
+            -e 's/claude-([a-z]+)-?[0-9-]*/\1/g'
+            -e 's/tokensByModel=/tokens=/g'
+            -e 's/TokenUsage\[input=([0-9]+), output=([0-9]+), cacheCreation=[0-9]+, cacheRead=[0-9]+\]/\1→\2/g'
+            -e 's/([a-z][a-z0-9_]*\.){2,}([A-Z][A-Za-z0-9_$]*)/\2/g'
+            -e 's/AttemptKey\[taskId=[^],]*, stage=([a-z]+), attempt=([0-9]+)\]/\1\/\2/g'
+            -e 's/AtStage\[name=([a-z]+)\]/\1/g'
+            -e 's/(sessionId=[0-9a-f]{8})[0-9a-f-]+/\1/g'
+            -e 's/([0-9])\.[0-9]+S/\1S/g'
+            # A command check identifies itself by its entire command text. Past the first
+            # line of it the verdict is the only part left to read.
+            -e 's/(check started: [a-z]+:.{48}).+$/\1…/'
+            -e 's/(check finished: [a-z]+:.{48}).* (-> [A-Za-z]+)$/\1… \2/'
+        )
+    fi
+    exec > >("${compact[@]}" | "${redact[@]}") 2> >("${compact[@]}" | "${redact[@]}" >&2)
 fi
 
 # `--slots` is a real CLI flag, not a Spring property, so a second one is a usage

@@ -6,6 +6,7 @@
 #   --factory.instance-name=<project>        (this clone's name; see below)
 #   --factory.bindings.default-binding=host  (no sandbox image is built for this project yet)
 #   --factory.agent-cli-binary=<claude-gnome>       (adds --permission-mode acceptEdits; see that script)
+#   --factory.sandbox.env-passthrough=GH_TOKEN      (the deliver stage needs `gh`; see the token block)
 #
 # Both are plain defaults: pass your own --dir=... or --factory.bindings.default-binding=container
 # and yours wins (last flag on the Spring command line takes precedence).
@@ -75,6 +76,25 @@ point_at_file() {
 point_at_file GNOMISH_GITHUB_TOKEN_FILE "$secrets_dir/github-token"
 point_at_file GNOMISH_GITHUB_ACTIONS_TOKEN_FILE "$secrets_dir/github-actions-token"
 
+# The deliver stage runs `gh` — in the gnome's round and in that stage's own command checks —
+# and `gh` takes its credential from GH_TOKEN. The tracker's GNOMISH_GITHUB_TOKEN cannot serve
+# it: the factory declares that name a credential, so it is scrubbed from every child
+# environment and refused in the passthrough allowlist by construction. The same token is
+# therefore exported a second time under a name the factory has no reason to treat as one, and
+# allowlisted by name below.
+#
+# What that costs, plainly: the gnome's process holds a token with the tracker's own rights —
+# it can write issues and labels as you, and the value now sits in this process's environment
+# table, which the *_FILE indirection above exists to avoid. Dropping a fine-grained token
+# scoped to Contents + Pull requests into github-pr-token narrows both: it wins over the
+# tracker token here, and nothing else reads it.
+pr_token_file="$secrets_dir/github-pr-token"
+[[ -f "$pr_token_file" ]] || pr_token_file="$secrets_dir/github-token"
+if [[ -z "${GH_TOKEN:-}" && -f "$pr_token_file" ]]; then
+    GH_TOKEN="$(tr -d '[:space:]' < "$pr_token_file")"
+    export GH_TOKEN
+fi
+
 # Only a default: a repeated Spring option is joined with a comma rather than overridden by
 # the last one, so an explicit --factory.instance-name from the caller replaces this instead
 # of competing with it.
@@ -95,4 +115,5 @@ exec java -jar "$project_dir/gnomish.jar" \
     ${instance_name[@]+"${instance_name[@]}"} \
     --factory.bindings.default-binding=host \
     --factory.agent-cli-binary="$project_dir/claude-gnome" \
+    --factory.sandbox.env-passthrough=GH_TOKEN \
     "$@"

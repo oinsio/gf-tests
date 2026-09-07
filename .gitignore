@@ -39,3 +39,7 @@ Thumbs.db
 
 /logs
 GNOMISH-FINDINGS.md
+
+# The deliver stage leaves the published pull request body here for its judge to read;
+# it is a review artifact of one task branch, never part of the project.
+pr-body.md

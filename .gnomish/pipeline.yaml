@@ -2,3 +2,4 @@ stages:
   - specify
   - implement
   - archive
+  - deliver
