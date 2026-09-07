@@ -20,7 +20,7 @@ context: |
 
   Domain:
   - Standalone Java application (HelloWorld example)
-  - Project: jetbrains-air-tests - sandbox for testing Java/Gradle/Spock setup
+  - Project: gf-tests - sandbox for testing Java/Gradle/Spock setup
 
 rules:
   proposal:

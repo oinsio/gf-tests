@@ -1,6 +1,6 @@
 # Quick start
 
-Instructions for building, running, and checking the results of the `jetbrains-air-tests` project.
+Instructions for building, running, and checking the results of the `gf-tests` project.
 
 ## 1. How to build the project
 
