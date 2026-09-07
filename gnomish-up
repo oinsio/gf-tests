@@ -3,7 +3,7 @@
 #
 # Equivalent to running these three side by side, in three terminals:
 #   ./gnomish dashboard --watch --out=logs/dashboard.html
-#   tail -F ~/.gnomish/logs/gnomish.log
+#   tail -F ~/.gnomish/logs/<project>/gnomish.log
 #   ./gnomish serve --slots=1
 #
 # The dashboard renderer and the log follower go to the background, the daemon stays
@@ -13,7 +13,9 @@
 #
 # The log follower is there because the daemon's console carries only WARN and above:
 # the INFO narrative — what each gnome is doing, stage by stage — only ever reaches
-# ~/.gnomish/logs/gnomish.log. Without it a healthy run looks like a silent terminal.
+# the log file. Without it a healthy run looks like a silent terminal. The file is
+# ~/.gnomish/logs/<project>/gnomish.log — per clone, so two factories running side by
+# side keep two separate narratives instead of interleaving into one.
 #
 #   ./gnomish-up                 # 1 slot, opens the dashboard in a browser
 #   ./gnomish-up --slots=4       # any serve flag is passed straight through
@@ -27,9 +29,11 @@ set -euo pipefail
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dashboard_out="${GNOMISH_DASHBOARD_OUT:-$project_dir/logs/dashboard.html}"
 dashboard_log="${GNOMISH_DASHBOARD_LOG:-$project_dir/logs/dashboard-render.log}"
-# The same default the factory's logback config uses, and the same override name, so the
-# follower cannot end up watching a file the daemon is not writing to.
-factory_log="${GNOMISH_LOG_DIR:-$HOME/.gnomish/logs}/gnomish.log"
+# Resolved here and exported, so the follower and the daemon it starts cannot end up on
+# two different files: the wrapper defaults this the same way, and an already-set value
+# (yours, or this one) is left alone by it.
+export GNOMISH_LOG_DIR="${GNOMISH_LOG_DIR:-$HOME/.gnomish/logs/$(basename "$project_dir")}"
+factory_log="$GNOMISH_LOG_DIR/gnomish.log"
 
 open_browser=1
 follow_logs=1

@@ -24,6 +24,9 @@
 # GNOMISH_SECRETS_DIR moves the directory; GNOMISH_GITHUB_TOKEN_FILE names one file directly;
 # an already-exported GNOMISH_GITHUB_TOKEN still works and is left alone.
 #
+# The log file is keyed by project the same way: ~/.gnomish/logs/<project>/gnomish.log.
+# GNOMISH_LOG_DIR still wins if you set it yourself.
+#
 #   ./gnomish run --task="..." --mode=in-place --interactive
 #   ./gnomish status --task=<id>
 set -euo pipefail
@@ -34,6 +37,12 @@ project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # (operator-guide-run.md: ~/.gnomish/worktrees/<project-name>/...), so two clones served by
 # one factory never share a token by accident.
 secrets_dir="${GNOMISH_SECRETS_DIR:-$HOME/.gnomish/secrets/$(basename "$project_dir")}"
+
+# The factory's own default is one log file per host, so two factories started from two
+# clones interleave their narratives into a single gnomish.log and neither one can be read
+# on its own. Keying the directory by clone name gives each its own file to tail. Exported,
+# not passed as a flag: logback reads it from the environment before Spring starts.
+export GNOMISH_LOG_DIR="${GNOMISH_LOG_DIR:-$HOME/.gnomish/logs/$(basename "$project_dir")}"
 
 # Point <SECRET>_FILE at the local file, but only when that file is actually there: the
 # provider is fail-closed, so a _FILE naming a missing path resolves the secret as ABSENT

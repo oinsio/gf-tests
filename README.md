@@ -60,9 +60,9 @@ Starts three things at once and stops them all on Ctrl-C:
 
 - the dashboard renderer in the background — `logs/dashboard.html`, re-rendered every
   10 s, opened in a browser once;
-- a follower on the factory log, `~/.gnomish/logs/gnomish.log`, streamed into the same
-  terminal. The daemon's own console carries only `WARN` and above, so this is where the
-  INFO narrative of a healthy run comes from; those two levels are filtered out of the
+- a follower on the factory log, `~/.gnomish/logs/gf-tests/gnomish.log`, streamed into the
+  same terminal. The daemon's own console carries only `WARN` and above, so this is where
+  the INFO narrative of a healthy run comes from; those two levels are filtered out of the
   follower to keep them from appearing twice;
 - `gnomish serve` in the foreground.
 
@@ -73,8 +73,13 @@ separately:
 ```bash
 ./gnomish serve --slots=1
 ./gnomish dashboard --watch --out=logs/dashboard.html
-tail -F ~/.gnomish/logs/gnomish.log
+tail -F ~/.gnomish/logs/gf-tests/gnomish.log
 ```
+
+The log directory is keyed by this clone's name, like `~/.gnomish/secrets/gf-tests` above:
+the factory writes one file per host by default, so two factories started from two clones
+would interleave into a single `gnomish.log` and neither could be followed on its own.
+Setting `GNOMISH_LOG_DIR` yourself overrides it, for both the daemon and the follower.
 
 ## Run tests
 
