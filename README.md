@@ -76,10 +76,16 @@ separately:
 tail -F ~/.gnomish/logs/gf-tests/gnomish.log
 ```
 
-The log directory is keyed by this clone's name, like `~/.gnomish/secrets/gf-tests` above:
-the factory writes one file per host by default, so two factories started from two clones
-would interleave into a single `gnomish.log` and neither could be followed on its own.
-Setting `GNOMISH_LOG_DIR` yourself overrides it, for both the daemon and the follower.
+Everything a running factory owns outside the clone is keyed by this clone's name, the way
+`~/.gnomish/secrets/gf-tests` is: the log at `~/.gnomish/logs/gf-tests/gnomish.log`, and the
+daemon's own state — `snapshot.json` plus the daily ledgers — under
+`~/.gnomish/serve/gf-tests/`, via `--factory.instance-name`. Both default to one location per
+host, so two factories started from two clones would otherwise overwrite each other's
+snapshot (both dashboards then show whichever daemon wrote last) and interleave their logs
+and ledgers. Passing your own `GNOMISH_LOG_DIR` or `--factory.instance-name` overrides it.
+
+The instance name is also the first half of the id in the gnome's claim comments on the
+tracker — `gf-tests-a1b2c3`, where the suffix is minted fresh on every start.
 
 ## Run tests
 
