@@ -445,4 +445,22 @@ class HelloWorldSpec extends Specification {
         System.setOut(System.out)
         System.setIn(System.in)
     }
+
+    def "prints stats and exits when started with --stats, without printing a greeting or prompting to save"() {
+        given:
+        def output = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(output))
+        System.setIn(new ByteArrayInputStream(new byte[0]))
+
+        when:
+        HelloWorld.main(["--stats"] as String[])
+
+        then:
+        !output.toString().contains("Greeting history:")
+        !output.toString().contains("Save greeting to file?")
+
+        cleanup:
+        System.setOut(System.out)
+        System.setIn(System.in)
+    }
 }

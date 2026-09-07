@@ -21,6 +21,11 @@ public class HelloWorld {
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public static void main(String[] args) throws IOException {
+        if (List.of(args).contains("--stats")) {
+            GreetingStats.print(GREETINGS_FILE, System.out);
+            return;
+        }
+        run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
         run(greetingFor(args), System.in, System.out, GREETINGS_FILE, Clock.systemDefaultZone());
     }
 
