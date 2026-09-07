@@ -67,7 +67,10 @@ Starts three things at once and stops them all on Ctrl-C:
 - `gnomish serve` in the foreground.
 
 Flags are passed through to `gnomish serve` (`./gnomish-up --slots=4 --drain`); `--no-open`
-skips the browser and `--no-logs` the log follower. The pieces are still available
+skips the browser, `--no-logs` the log follower, and `--demo` rewrites this clone's path to
+`.` and the rest of the home directory to `~` in everything the terminal prints — for a
+screen recording. The log file itself keeps its absolute paths, so debugging afterwards is
+unaffected. The pieces are still available
 separately:
 
 ```bash
