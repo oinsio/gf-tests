@@ -5,11 +5,18 @@ import spock.lang.TempDir
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 class HelloWorldSpec extends Specification {
 
     @TempDir
     Path tempDir
+
+    static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-09-07T14:30:00Z"), ZoneId.of("UTC"))
+    static final String FIXED_TIMESTAMP = "2026-09-07 14:30"
 
     def "should print hello world message"() {
         given:
@@ -33,7 +40,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         output.toString().contains("Save greeting to file?")
@@ -46,7 +53,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         Files.exists(outputFile)
@@ -60,7 +67,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         !Files.exists(outputFile)
@@ -95,11 +102,11 @@ class HelloWorldSpec extends Specification {
         def file = tempDir.resolve("greetings.txt")
 
         when:
-        HelloWorld.appendGreeting("Hello, World!", file)
+        HelloWorld.appendGreeting("Hello, World!", file, FIXED_CLOCK)
 
         then:
         Files.exists(file)
-        Files.readString(file) == "Hello, World!" + System.lineSeparator()
+        Files.readString(file) == FIXED_TIMESTAMP + " Hello, World!" + System.lineSeparator()
     }
 
     def "appendGreeting continues writing into the same file"() {
@@ -107,13 +114,13 @@ class HelloWorldSpec extends Specification {
         def file = tempDir.resolve("greetings.txt")
 
         when:
-        HelloWorld.appendGreeting("Hello, World!", file)
-        HelloWorld.appendGreeting("Hello, Alice!", file)
+        HelloWorld.appendGreeting("Hello, World!", file, FIXED_CLOCK)
+        HelloWorld.appendGreeting("Hello, Alice!", file, FIXED_CLOCK)
 
         then:
         Files.readString(file) ==
-                "Hello, World!" + System.lineSeparator() +
-                "Hello, Alice!" + System.lineSeparator()
+                FIXED_TIMESTAMP + " Hello, World!" + System.lineSeparator() +
+                FIXED_TIMESTAMP + " Hello, Alice!" + System.lineSeparator()
     }
 
     def "run prints empty history and greeting number 1 when the file does not exist"() {
@@ -123,7 +130,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         output.toString().contains("Greeting history:")
@@ -135,11 +142,11 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        HelloWorld.appendGreeting("Hello, World!", outputFile)
-        HelloWorld.appendGreeting("Hello, World!", outputFile)
+        HelloWorld.appendGreeting("Hello, World!", outputFile, FIXED_CLOCK)
+        HelloWorld.appendGreeting("Hello, World!", outputFile, FIXED_CLOCK)
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         output.toString().count("Hello, World!") == 3
@@ -157,11 +164,12 @@ class HelloWorldSpec extends Specification {
     def "readHistory returns the lines already stored in the file"() {
         given:
         def file = tempDir.resolve("greetings.txt")
-        HelloWorld.appendGreeting("Hello, World!", file)
-        HelloWorld.appendGreeting("Hello, Alice!", file)
+        HelloWorld.appendGreeting("Hello, World!", file, FIXED_CLOCK)
+        HelloWorld.appendGreeting("Hello, Alice!", file, FIXED_CLOCK)
 
         expect:
-        HelloWorld.readHistory(file) == ["Hello, World!", "Hello, Alice!"]
+        HelloWorld.readHistory(file) ==
+                [FIXED_TIMESTAMP + " Hello, World!", FIXED_TIMESTAMP + " Hello, Alice!"]
     }
 
     def "greetingFor returns the default greeting with no arguments"() {
@@ -201,7 +209,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run(HelloWorld.greetingFor(["Alice"] as String[]), input, new PrintStream(output), outputFile)
+        HelloWorld.run(HelloWorld.greetingFor(["Alice"] as String[]), input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         Files.exists(outputFile)
@@ -213,10 +221,10 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        HelloWorld.appendGreeting("Hello, World!", outputFile)
+        HelloWorld.appendGreeting("Hello, World!", outputFile, FIXED_CLOCK)
 
         when:
-        HelloWorld.run(HelloWorld.greetingFor(["Alice"] as String[]), input, new PrintStream(output), outputFile)
+        HelloWorld.run(HelloWorld.greetingFor(["Alice"] as String[]), input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         output.toString().contains("Hello, Alice!")
@@ -228,17 +236,18 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile, FIXED_CLOCK) }
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         def lines = output.toString().readLines()
-        def displayed = lines.findAll { it.startsWith("Hello, Number") }
-        displayed == ["Hello, Number 8!", "Hello, Number 7!", "Hello, Number 6!",
-                       "Hello, Number 5!", "Hello, Number 4!"]
-        lines.indexOf("and 3 more earlier.") > lines.indexOf("Hello, Number 4!")
+        def displayed = lines.findAll { it.contains("Hello, Number") }
+        displayed == ["${FIXED_TIMESTAMP} Hello, Number 8!", "${FIXED_TIMESTAMP} Hello, Number 7!",
+                       "${FIXED_TIMESTAMP} Hello, Number 6!", "${FIXED_TIMESTAMP} Hello, Number 5!",
+                       "${FIXED_TIMESTAMP} Hello, Number 4!"]
+        lines.indexOf("and 3 more earlier.") > lines.indexOf("${FIXED_TIMESTAMP} Hello, Number 4!" as String)
     }
 
     def "run prints all history entries newest first when there are 5 or fewer"() {
@@ -246,16 +255,17 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        (1..5).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+        (1..5).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile, FIXED_CLOCK) }
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         def lines = output.toString().readLines()
-        def displayed = lines.findAll { it.startsWith("Hello, Number") }
-        displayed == ["Hello, Number 5!", "Hello, Number 4!", "Hello, Number 3!",
-                       "Hello, Number 2!", "Hello, Number 1!"]
+        def displayed = lines.findAll { it.contains("Hello, Number") }
+        displayed == ["${FIXED_TIMESTAMP} Hello, Number 5!", "${FIXED_TIMESTAMP} Hello, Number 4!",
+                       "${FIXED_TIMESTAMP} Hello, Number 3!", "${FIXED_TIMESTAMP} Hello, Number 2!",
+                       "${FIXED_TIMESTAMP} Hello, Number 1!"]
     }
 
     def "run prints the hidden-count summary line when history exceeds 5 entries"() {
@@ -263,10 +273,10 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile, FIXED_CLOCK) }
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         output.toString().contains("and 3 more earlier.")
@@ -277,10 +287,10 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        (1..5).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+        (1..5).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile, FIXED_CLOCK) }
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         !output.toString().contains("earlier.")
@@ -293,7 +303,7 @@ class HelloWorldSpec extends Specification {
         def outputFile = tempDir.resolve("greeting.txt")
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         !output.toString().contains("earlier.")
@@ -304,10 +314,10 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile, FIXED_CLOCK) }
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         output.toString().contains("This is greeting number 9.")
@@ -318,14 +328,14 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile) }
+        (1..8).each { HelloWorld.appendGreeting("Hello, Number ${it}!", outputFile, FIXED_CLOCK) }
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         def lines = output.toString().readLines()
-        def displayed = lines.findAll { it.startsWith("Hello, Number") }
+        def displayed = lines.findAll { it.contains("Hello, Number") }
         displayed.size() == 5
         output.toString().contains("This is greeting number 9.")
     }
@@ -335,16 +345,16 @@ class HelloWorldSpec extends Specification {
         def input = new ByteArrayInputStream("no\n".bytes)
         def output = new ByteArrayOutputStream()
         def outputFile = tempDir.resolve("greeting.txt")
-        HelloWorld.appendGreeting("Hello, Number 1!", outputFile)
-        HelloWorld.appendGreeting("Hello, Number 2!", outputFile)
+        HelloWorld.appendGreeting("Hello, Number 1!", outputFile, FIXED_CLOCK)
+        HelloWorld.appendGreeting("Hello, Number 2!", outputFile, FIXED_CLOCK)
 
         when:
-        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile)
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
 
         then:
         def lines = output.toString().readLines()
-        def displayed = lines.findAll { it.startsWith("Hello, Number") }
-        displayed == ["Hello, Number 2!", "Hello, Number 1!"]
+        def displayed = lines.findAll { it.contains("Hello, Number") }
+        displayed == ["${FIXED_TIMESTAMP} Hello, Number 2!", "${FIXED_TIMESTAMP} Hello, Number 1!"]
         !output.toString().contains("earlier.")
     }
 
@@ -385,5 +395,62 @@ class HelloWorldSpec extends Specification {
         cleanup:
         System.setOut(System.out)
         System.setIn(System.in)
+    }
+
+    def "appendGreeting prefixes the saved line with the timestamp from the fixed clock"() {
+        given:
+        def file = tempDir.resolve("greetings.txt")
+
+        when:
+        HelloWorld.appendGreeting("Hello, World!", file, FIXED_CLOCK)
+
+        then:
+        Files.readString(file).startsWith(FIXED_TIMESTAMP + " ")
+    }
+
+    def "parseHistoryLine splits a timestamped line into timestamp and greeting"() {
+        expect:
+        def entry = HelloWorld.parseHistoryLine("2026-09-07 14:30 Hello, World!")
+        entry.timestamp() == "2026-09-07 14:30"
+        entry.greeting() == "Hello, World!"
+    }
+
+    def "parseHistoryLine treats a legacy line with no timestamp as the whole greeting"() {
+        expect:
+        def entry = HelloWorld.parseHistoryLine("Hello, World!")
+        entry.timestamp() == null
+        entry.greeting() == "Hello, World!"
+    }
+
+    def "run displays a legacy untimestamped history line unchanged"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        Files.writeString(outputFile, "Hello, World!" + System.lineSeparator())
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
+
+        then:
+        def lines = output.toString().readLines()
+        lines.contains("Hello, World!")
+    }
+
+    def "run displays a mix of legacy and timestamped history lines correctly"() {
+        given:
+        def input = new ByteArrayInputStream("no\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        Files.writeString(outputFile, "Hello, Legacy!" + System.lineSeparator())
+        HelloWorld.appendGreeting("Hello, New!", outputFile, FIXED_CLOCK)
+
+        when:
+        HelloWorld.run("Hello, World!", input, new PrintStream(output), outputFile, FIXED_CLOCK)
+
+        then:
+        def lines = output.toString().readLines()
+        lines.contains("Hello, Legacy!")
+        lines.contains(FIXED_TIMESTAMP + " Hello, New!")
     }
 }
