@@ -364,4 +364,27 @@ class HelloWorldSpec extends Specification {
         System.setOut(System.out)
         System.setIn(System.in)
     }
+
+    def "main dispatches to stats without printing a greeting or save prompt when given --stats"() {
+        given:
+        def output = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(output))
+        System.setIn(new ByteArrayInputStream(new byte[0]))
+        def greetingsFile = Path.of("greetings.txt")
+        def existed = Files.exists(greetingsFile)
+        def previousContent = existed ? Files.readString(greetingsFile) : null
+
+        when:
+        HelloWorld.main(["--stats"] as String[])
+
+        then:
+        !output.toString().contains("Hello, World!")
+        !output.toString().contains("Save greeting to file?")
+        Files.exists(greetingsFile) == existed
+        !existed || Files.readString(greetingsFile) == previousContent
+
+        cleanup:
+        System.setOut(System.out)
+        System.setIn(System.in)
+    }
 }
