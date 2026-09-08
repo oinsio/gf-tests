@@ -23,6 +23,10 @@ public class HelloWorld {
     private static final int TIMESTAMP_LENGTH = 16;
 
     public static void main(String[] args) throws IOException {
+        if (List.of(args).contains("--stats")) {
+            GreetingStats.run(System.out, GREETINGS_FILE);
+            return;
+        }
         run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
     }
 
