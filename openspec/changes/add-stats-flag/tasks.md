@@ -1,6 +1,6 @@
 ## 1. GreetingStats class
 
-- [ ] 1.1 Create `src/main/java/com/example/GreetingStats.java` with logic to
+- [x] 1.1 Create `src/main/java/com/example/GreetingStats.java` with logic to
       read `greetings.txt`, compute the total count and the most frequent
       greeting with its count, and print either those statistics or
       `No greetings saved yet.` (when the file is missing or empty) to a
@@ -11,7 +11,7 @@
 
 ## 2. HelloWorld dispatch
 
-- [ ] 2.1 In `HelloWorld.main`, detect the `--stats` argument and delegate to
+- [x] 2.1 In `HelloWorld.main`, detect the `--stats` argument and delegate to
       `GreetingStats` instead of running the normal greet/history/save flow,
       leaving all other argument handling unchanged. Verify with
       `src/test/groovy/com/example/HelloWorldSpec.groovy`, asserting that
@@ -20,5 +20,5 @@
 
 ## 3. Full verification
 
-- [ ] 3.1 Run `./gradlew test` and confirm `GreetingStatsSpec` and
+- [x] 3.1 Run `./gradlew test` and confirm `GreetingStatsSpec` and
       `HelloWorldSpec` both pass.

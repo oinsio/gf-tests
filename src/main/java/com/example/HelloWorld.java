@@ -17,6 +17,10 @@ public class HelloWorld {
     private static final int HISTORY_DISPLAY_LIMIT = 5;
 
     public static void main(String[] args) throws IOException {
+        if (args.length == 1 && args[0].equals("--stats")) {
+            GreetingStats.print(GREETINGS_FILE, System.out);
+            return;
+        }
         run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
     }
 
