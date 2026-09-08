@@ -6,31 +6,18 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class HelloWorld {
     private static final String GREETING = "Hello, World!";
     private static final Path GREETINGS_FILE = Path.of("greetings.txt");
     private static final int HISTORY_DISPLAY_LIMIT = 5;
-    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-    private static final Pattern TIMESTAMPED_LINE = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}) (.*)$");
-
-    record HistoryEntry(String timestamp, String greeting) {
-        String display() {
-            return timestamp == null ? greeting : timestamp + " " + greeting;
-        }
-    }
 
     public static void main(String[] args) throws IOException {
-        run(greetingFor(args), System.in, System.out, GREETINGS_FILE, Clock.systemDefaultZone());
+        run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
     }
 
     static String greetingFor(String[] args) {
@@ -38,7 +25,7 @@ public class HelloWorld {
         return name.isEmpty() ? GREETING : "Hello, " + name + "!";
     }
 
-    static void run(String greeting, InputStream in, PrintStream out, Path outputFile, Clock clock) throws IOException {
+    static void run(String greeting, InputStream in, PrintStream out, Path outputFile) throws IOException {
         out.println(greeting);
 
         List<String> history = readHistory(outputFile);
@@ -49,7 +36,7 @@ public class HelloWorld {
                 : history;
         List<String> reversedHistory = new ArrayList<>(displayedHistory);
         Collections.reverse(reversedHistory);
-        reversedHistory.stream().map(HelloWorld::parseHistoryLine).map(HistoryEntry::display).forEach(out::println);
+        reversedHistory.forEach(out::println);
         if (hiddenCount > 0) {
             out.println("and " + hiddenCount + " more earlier.");
         }
@@ -61,19 +48,12 @@ public class HelloWorld {
         String answer = scanner.hasNextLine() ? scanner.nextLine() : "";
 
         if (isAffirmative(answer)) {
-            appendGreeting(greeting, outputFile, clock);
+            appendGreeting(greeting, outputFile);
         }
     }
 
     static List<String> readHistory(Path file) throws IOException {
         return Files.exists(file) ? Files.readAllLines(file) : List.of();
-    }
-
-    static HistoryEntry parseHistoryLine(String line) {
-        Matcher matcher = TIMESTAMPED_LINE.matcher(line);
-        return matcher.matches()
-                ? new HistoryEntry(matcher.group(1), matcher.group(2))
-                : new HistoryEntry(null, line);
     }
 
     private static boolean isAffirmative(String answer) {
@@ -85,9 +65,8 @@ public class HelloWorld {
         return "Hello, " + name + "!";
     }
 
-    static void appendGreeting(String greeting, Path file, Clock clock) throws IOException {
-        String timestamp = LocalDateTime.now(clock).format(TIMESTAMP_FORMAT);
-        Files.writeString(file, timestamp + " " + greeting + System.lineSeparator(),
+    static void appendGreeting(String greeting, Path file) throws IOException {
+        Files.writeString(file, greeting + System.lineSeparator(),
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 }
