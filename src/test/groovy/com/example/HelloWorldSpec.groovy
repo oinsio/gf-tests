@@ -358,6 +358,28 @@ class HelloWorldSpec extends Specification {
         !output.toString().contains("earlier.")
     }
 
+    def "main with --stats prints statistics and no greeting or save prompt"() {
+        given:
+        def greetingsFile = Path.of("greetings.txt")
+        def output = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(output))
+        System.setIn(new ByteArrayInputStream(new byte[0]))
+        HelloWorld.appendGreeting("Hello, World!", greetingsFile)
+
+        when:
+        HelloWorld.main(["--stats"] as String[])
+
+        then:
+        !output.toString().contains("Save greeting to file?")
+        !output.toString().contains("Greeting history:")
+        output.toString().contains("Total greetings saved:")
+
+        cleanup:
+        System.setOut(System.out)
+        System.setIn(System.in)
+        Files.deleteIfExists(greetingsFile)
+    }
+
     def "main prints a personalized greeting when a name argument is supplied"() {
         given:
         def output = new ByteArrayOutputStream()
