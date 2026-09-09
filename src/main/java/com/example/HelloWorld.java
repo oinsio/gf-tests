@@ -76,6 +76,11 @@ public class HelloWorld {
         }
     }
 
+    static String nameFromGreeting(String line) {
+        String text = parseHistoryLine(line).text();
+        return text.substring("Hello, ".length(), text.length() - 1);
+    }
+
     private static HistoryEntry parseHistoryLine(String line) {
         if (line.length() > TIMESTAMP_LENGTH && line.charAt(TIMESTAMP_LENGTH) == ' ') {
             try {

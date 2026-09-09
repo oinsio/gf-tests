@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GreetingStats {
 
@@ -18,8 +20,10 @@ public class GreetingStats {
         }
 
         Map<String, Integer> counts = new LinkedHashMap<>();
+        Set<String> greetedNames = new LinkedHashSet<>();
         for (String greeting : history) {
             counts.merge(greeting, 1, Integer::sum);
+            greetedNames.add(HelloWorld.nameFromGreeting(greeting));
         }
 
         String mostFrequent = null;
@@ -33,5 +37,6 @@ public class GreetingStats {
 
         out.println("Total greetings saved: " + history.size());
         out.println("Most frequent greeting: " + mostFrequent + " (" + mostFrequentCount + " times)");
+        out.println("Greeted names: " + String.join(", ", greetedNames));
     }
 }
