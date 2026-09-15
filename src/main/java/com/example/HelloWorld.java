@@ -76,6 +76,14 @@ public class HelloWorld {
         }
     }
 
+    /**
+     * The greeting itself, with the saved timestamp prefix stripped when the line carries one.
+     * Legacy lines written before timestamping are returned unchanged.
+     */
+    static String greetingText(String line) {
+        return parseHistoryLine(line).text();
+    }
+
     private static HistoryEntry parseHistoryLine(String line) {
         if (line.length() > TIMESTAMP_LENGTH && line.charAt(TIMESTAMP_LENGTH) == ' ') {
             try {

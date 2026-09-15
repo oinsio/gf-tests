@@ -18,8 +18,8 @@ public class GreetingStats {
         }
 
         Map<String, Integer> counts = new LinkedHashMap<>();
-        for (String greeting : history) {
-            counts.merge(greeting, 1, Integer::sum);
+        for (String line : history) {
+            counts.merge(HelloWorld.greetingText(line), 1, Integer::sum);
         }
 
         String mostFrequent = null;

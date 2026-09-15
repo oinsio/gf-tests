@@ -50,6 +50,22 @@ class GreetingStatsSpec extends Specification {
         output.toString().contains("Most frequent greeting: Hello, World! (1 times)")
     }
 
+    def "counts a greeting saved before timestamping together with its timestamped repeats"() {
+        given:
+        def output = new ByteArrayOutputStream()
+        def file = tempDir.resolve("greetings.txt")
+        Files.writeString(file, "Hello, World!" + System.lineSeparator())
+        HelloWorld.appendGreeting("Hello, World!", file)
+        HelloWorld.appendGreeting("Hello, Alice!", file)
+
+        when:
+        GreetingStats.run(new PrintStream(output), file)
+
+        then:
+        output.toString().contains("Total greetings saved: 3")
+        output.toString().contains("Most frequent greeting: Hello, World! (2 times)")
+    }
+
     def "reports the total and the clear leader among multiple distinct greetings"() {
         given:
         def output = new ByteArrayOutputStream()

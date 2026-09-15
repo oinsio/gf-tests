@@ -2,7 +2,7 @@
 # Wrapper around the locally built Gnomish Factory jar (gnomish.jar).
 #
 # Adds two things every invocation from this project needs, then passes the rest through:
-#   --dir=<this project, absolute>   (a relative --dir breaks law-file resolution)
+#   --dir=<this project, absolute>   (a relative --dir is not recognised as a git repo in git mode)
 #   --factory.instance-name=<project>        (this clone's name; see below)
 #   --factory.bindings.default-binding=host  (no sandbox image is built for this project yet)
 #   --factory.agent-cli-binary=<claude-gnome>       (adds --permission-mode acceptEdits; see that script)
