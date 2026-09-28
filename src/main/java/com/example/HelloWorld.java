@@ -27,12 +27,16 @@ public class HelloWorld {
             GreetingStats.run(System.out, GREETINGS_FILE);
             return;
         }
-        run(greetingFor(args), System.in, System.out, GREETINGS_FILE);
+        run(applyUpper(greetingFor(args), System.getenv("GF_UPPER")), System.in, System.out, GREETINGS_FILE);
     }
 
     static String greetingFor(String[] args) {
         String name = String.join(" ", args).trim();
         return name.isEmpty() ? GREETING : "Hello, " + name + "!";
+    }
+
+    static String applyUpper(String greeting, String gfUpper) {
+        return "1".equals(gfUpper) ? greeting.toUpperCase() : greeting;
     }
 
     static void run(String greeting, InputStream in, PrintStream out, Path outputFile) throws IOException {

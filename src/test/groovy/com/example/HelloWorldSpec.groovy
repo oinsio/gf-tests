@@ -432,6 +432,35 @@ class HelloWorldSpec extends Specification {
         System.setIn(System.in)
     }
 
+    def "should upper-case the default greeting when GF_UPPER is 1"() {
+        expect:
+        HelloWorld.applyUpper(HelloWorld.greetingFor([] as String[]), "1") == "HELLO, WORLD!"
+        HelloWorld.applyUpper(HelloWorld.greetingFor(["Alice"] as String[]), "1") == "HELLO, ALICE!"
+    }
+
+    def "should upper-case a personalized greeting and save it in upper case when GF_UPPER is 1"() {
+        given:
+        def input = new ByteArrayInputStream("yes\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+        def greeting = HelloWorld.applyUpper(HelloWorld.greetingFor(["Alice"] as String[]), "1")
+
+        when:
+        HelloWorld.run(greeting, input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("HELLO, ALICE!")
+        Files.readString(outputFile).contains("HELLO, ALICE!")
+    }
+
+    def "should leave the greeting unchanged when GF_UPPER is unset or not equal to 1"() {
+        expect:
+        HelloWorld.applyUpper("Hello, Alice!", gfUpper) == "Hello, Alice!"
+
+        where:
+        gfUpper << [null, "", "true", "0", "2"]
+    }
+
     def "main dispatches to stats without printing a greeting or save prompt when given --stats"() {
         given:
         def output = new ByteArrayOutputStream()
