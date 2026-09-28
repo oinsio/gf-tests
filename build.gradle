@@ -7,9 +7,18 @@ plugins {
 group = 'com.example'
 version = '1.0-SNAPSHOT'
 
+// A toolchain, not sourceCompatibility/targetCompatibility: those two say what level to
+// compile TO but leave the compiler itself as whatever JVM Gradle happens to run on. That
+// made the build depend on the machine: on a host whose default `java` is 27, `compileJava`
+// passed while `compileTestGroovy` died reading JDK 27 class files with the Groovy 4.0.32
+// bundled in Gradle 9.7 ("Unsupported class file major version 71"), and a JDK 21 launcher
+// failed the other way ("invalid source release: 25"). A toolchain forks both compilers into
+// a JDK 25 whatever the launcher is, which is also what makes the container image (JDK 25 as
+// its current JVM) and this host agree without either one exporting JAVA_HOME.
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
 }
 
 repositories {

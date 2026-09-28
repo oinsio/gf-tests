@@ -4,7 +4,12 @@ Sandbox project for testing Java/Gradle/Spock setup for https://github.com/oinsi
 
 ## Technologies
 
-- Java 25
+- Java 25 — pinned twice, and both are load-bearing: the `java {}` toolchain in
+  `build.gradle` picks the JDK that compiles the sources, and
+  `gradle/gradle-daemon-jvm.properties` pins the Gradle daemon itself. Without the second one,
+  a machine whose default `java` is newer cannot even compile this Groovy build script (Gradle
+  9.7 bundles Groovy 4.0.32, which cannot read Java 27 class files). Neither pin needs
+  `JAVA_HOME`; `./gradlew -q javaToolchains` shows which JDKs Gradle can find.
 - Gradle 9.7
 - Spock Framework 2.4 + Groovy 4.0
 - OpenSpec (spec-driven development)
@@ -35,12 +40,39 @@ Prints `Hello, World!`.
 - Appends confirmed greetings to `greetings.txt`, preserving prior entries.
 - `HelloWorld#greet(name)` builds a personalized greeting message.
 
+## Sandbox
+
+The gnomes run in Docker, not on this machine: `./gnomish` binds the factory's `container`
+adapter, so every agent round, judge vote and command check executes in an ephemeral box
+built from [`docker/sandbox/`](docker/sandbox/README.md). Build the image once before the
+first run, and again after changing the Gradle wrapper version or a pinned
+tool version:
+
+```bash
+./docker/sandbox/build.sh
+```
+
+The box is not your machine. It has no `~/.claude` and no keychain, so the agent CLI
+authenticates from `CLAUDE_CODE_OAUTH_TOKEN` alone — mint one with `claude setup-token` and
+drop it into the secrets file in the table above. It has no `origin` remote either: pushing
+the task branch stays the factory's job, host-side.
+
+Egress is default-deny through the factory's guard. The allowlist `./gnomish` passes is
+`api.anthropic.com` (the model provider), `api.github.com` and `github.com` (the tracker and
+`gh`), `repo.maven.apache.org` (`mavenCentral()`). `services.gradle.org` is deliberately
+absent — the image bakes the distribution the wrapper asks for. Denials are logged against
+the round and never gate it; one naming a host you do not recognise is worth reading the
+round trace over.
+
+To run the gnomes on this host instead — with your privileges, your files, and no egress
+control — pass `--factory.bindings.default=host` explicitly.
+
 ## Factory credentials
 
 The factory reads its GitHub token through its file indirection: for a secret `N` it takes
 `N_FILE` as a path and reads the value out of that file, so the token never sits in an
 environment table. `./gnomish` points those variables at local files — kept outside the clone
-(with `binding=host` the gnome works inside this tree) and per project, keyed by the clone's
+(a token in the tree is one you can commit) and per project, keyed by the clone's
 directory name the same way the factory keys `~/.gnomish/worktrees/<project>`:
 
 ```bash
@@ -54,6 +86,7 @@ install -m 600 /dev/null ~/.gnomish/secrets/gf-tests/github-token
 | `~/.gnomish/secrets/gf-tests/github-token`         | `GNOMISH_GITHUB_TOKEN`         | the tracker: issue read/write + label write                |
 | `~/.gnomish/secrets/gf-tests/github-actions-token` | `GNOMISH_GITHUB_ACTIONS_TOKEN` | a stage's GitHub Actions check (`actions: read`); optional |
 | `~/.gnomish/secrets/gf-tests/github-pr-token`      | `GH_TOKEN`                     | the `deliver` stage: `gh pr create`/`gh pr edit`           |
+| `~/.gnomish/secrets/gf-tests/claude-oauth-token`   | `CLAUDE_CODE_OAUTH_TOKEN`      | the agent CLI inside the box — there is no login there     |
 
 The wrapper only points at a file that exists, so exporting `GNOMISH_GITHUB_TOKEN` in the
 shell still works. `GNOMISH_SECRETS_DIR` moves the directory, `GNOMISH_GITHUB_TOKEN_FILE`
@@ -159,4 +192,6 @@ src/
   main/java/com/example/   — source code
   test/groovy/com/example/ — Spock specs
 openspec/                  — specs and workflow configuration
+docker/sandbox/            — the image the gnomes run in
+.gnomish/                  — factory pipeline and stage manifests
 ```

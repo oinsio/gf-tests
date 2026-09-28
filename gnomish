@@ -1,23 +1,66 @@
 #!/usr/bin/env bash
 # Wrapper around the locally built Gnomish Factory jar (gnomish.jar).
 #
-# Adds two things every invocation from this project needs, then passes the rest through:
+# Adds the defaults every invocation from this project needs, then passes the rest through:
 #   --dir=<this project, absolute>   (a relative --dir is not recognised as a git repo in git mode)
-#   --factory.instance-name=<project>        (this clone's name; see below)
-#   --factory.bindings.default-binding=host  (no sandbox image is built for this project yet)
-#   --factory.agent-cli-binary=<claude-gnome>       (adds --permission-mode acceptEdits; see that script)
-#   --factory.sandbox.env-passthrough=GH_TOKEN      (the deliver stage needs `gh`; see the token block)
+#   --factory.instance-name=<project>                  (this clone's name; see below)
+#   --factory.bindings.default=container               (the gnomes run in Docker; see the sandbox block)
+#   --factory.sandbox.image=<gf-tests-sandbox:1>       (built by docker/sandbox/build.sh)
+#   --factory.sandbox.egress-allowlist=<hosts>         (default-deny; see the sandbox block)
+#   --factory.sandbox.env-passthrough=GH_TOKEN         (`gh` in the deliver stage; see Secrets)
 #
-# Both are plain defaults: pass your own --dir=... or --factory.bindings.default-binding=container
-# and yours wins (last flag on the Spring command line takes precedence).
+# Every one of them is a plain default: pass your own --dir=... or
+# --factory.bindings.default=host and yours REPLACES it — each default is dropped when the
+# caller names the same key. That dropping is not decoration: Spring joins a repeated
+# command-line option with a comma rather than letting the last one win, so a default left
+# in place next to yours would produce `container,host`, not `host`.
+#
+# ---------------------------------------------------------------------------
+# Sandbox (container binding)
+#
+# Every gnome process — agent rounds, judge votes, command checks — runs inside an
+# ephemeral Docker box built from docker/sandbox/Dockerfile, not on this machine. Build or
+# rebuild the image before running:
+#
+#   ./docker/sandbox/build.sh
+#
+# Three consequences worth knowing here:
+#
+#   * The agent CLI is the stock `claude` the image installs, launched by its plain name.
+#     The factory renders the permission mode itself — acceptEdits for a gnome round,
+#     dontAsk for a judge vote — and --strict-mcp-config on both, so no wrapper script
+#     and no per-binding factory.agent-cli-binary is needed on either binding.
+#   * The egress allowlist is default-deny and operator-owned. What is on it and why:
+#       api.anthropic.com       the agent CLI's model provider
+#       api.github.com          the tracker, and `gh` in the deliver stage
+#       github.com              `gh`'s own web endpoints
+#       repo.maven.apache.org   mavenCentral() in build.gradle
+#     services.gradle.org is deliberately absent: docker/sandbox/build.sh bakes the exact
+#     distribution gradle/wrapper/gradle-wrapper.properties asks for into the image, so no
+#     box ever downloads it. Bump the wrapper -> rebuild the image.
+#     Denials are logged and attached to the round; they never gate it. A denied host you
+#     do not recognise is worth reading the round trace over.
+#   * The box is NOT your machine: it has no ~/.claude, no keychain, no origin remote. The
+#     agent CLI authenticates from CLAUDE_CODE_OAUTH_TOKEN alone (see below), and pushing
+#     the task branch stays the factory's job, host-side.
+#
+# To fall back to running the gnomes on this host — with your privileges, your files, and
+# no egress control — pass --factory.bindings.default=host explicitly. The agent CLI is the
+# same stock `claude` on PATH either way, and the toolchain matches too: the build pins both
+# the compiler and the Gradle daemon to JDK 25 (java {} toolchain in build.gradle,
+# gradle/gradle-daemon-jvm.properties), so nothing here has to forward a JAVA_HOME — the box
+# and this machine resolve the same version on their own. A machine with no JDK 25 fails with
+# Gradle's own "no matching toolchain" message; `./gradlew -q javaToolchains` lists what it sees.
+#
+# ---------------------------------------------------------------------------
+# Secrets
 #
 # Secrets use the factory's own file indirection (EnvFileSecretsProvider): for a secret N it
 # reads N_FILE as a path and takes the file's contents, so the token itself never enters this
 # process's environment table. All this script does is point N_FILE at the local file. The
-# files live OUTSIDE the clone — with binding=host the gnome runs in this working tree, and a
-# token in the tree is one it can read and one you can commit — and they are per project:
-# ~/.gnomish/secrets/<project>, keyed by this clone's directory name, the same way the factory
-# keys ~/.gnomish/worktrees/<project>. One token per project, revocable on its own.
+# files live OUTSIDE the clone — a token in the tree is one you can commit — and they are per
+# project: ~/.gnomish/secrets/<project>, keyed by this clone's directory name, the same way
+# the factory keys ~/.gnomish/worktrees/<project>. One token per project, revocable on its own.
 #
 #   mkdir -p ~/.gnomish/secrets/gf-tests
 #   install -m 600 /dev/null ~/.gnomish/secrets/gf-tests/github-token
@@ -44,6 +87,11 @@ set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+sandbox_image="gf-tests-sandbox:1"
+egress_allowlist="api.anthropic.com,api.github.com,github.com,repo.maven.apache.org"
+env_passthrough="GH_TOKEN"
+
+
 # Keyed by the clone directory's own name, exactly as the factory keys its worktrees root
 # (operator-guide-run.md: ~/.gnomish/worktrees/<project-name>/...), so two clones served by
 # one factory never share a token by accident.
@@ -55,6 +103,14 @@ secrets_dir="${GNOMISH_SECRETS_DIR:-$HOME/.gnomish/secrets/$(basename "$project_
 # not passed as a flag: logback reads it from the environment before Spring starts.
 export GNOMISH_LOG_DIR="${GNOMISH_LOG_DIR:-$HOME/.gnomish/logs/$(basename "$project_dir")}"
 
+warn_if_group_readable() {
+    local file="$1" perms
+    perms="$(stat -f %Lp "$file" 2>/dev/null || stat -c %a "$file" 2>/dev/null || echo "600")"
+    if [[ "${perms: -2}" != "00" ]]; then
+        echo "gnomish: $file is mode $perms — it holds a token, run: chmod 600 $file" >&2
+    fi
+}
+
 # Point <SECRET>_FILE at the local file, but only when that file is actually there: the
 # provider is fail-closed, so a _FILE naming a missing path resolves the secret as ABSENT
 # instead of falling back to the plain variable — pointing it at nothing would break an
@@ -65,16 +121,39 @@ point_at_file() {
     if [[ -n "${!var:-}" ]]; then
         return 0  # an explicit path from the caller wins over the convention
     fi
-    local perms
-    perms="$(stat -f %Lp "$file" 2>/dev/null || stat -c %a "$file" 2>/dev/null || echo "600")"
-    if [[ "${perms: -2}" != "00" ]]; then
-        echo "gnomish: $file is mode $perms — it holds a token, run: chmod 600 $file" >&2
-    fi
+    warn_if_group_readable "$file"
     export "$var=$file"
 }
 
 point_at_file GNOMISH_GITHUB_TOKEN_FILE "$secrets_dir/github-token"
 point_at_file GNOMISH_GITHUB_ACTIONS_TOKEN_FILE "$secrets_dir/github-actions-token"
+
+# The agent CLI's credential. In the box there is no ~/.claude and no keychain to log in
+# from, so the CLI authenticates from this token and nothing else. Mint a long-lived one
+# against your subscription and store it like the others:
+#
+#   claude setup-token
+#   install -m 600 /dev/null ~/.gnomish/secrets/gf-tests/claude-oauth-token
+#   # paste the token in — the file IS the value
+#
+# Unlike the tracker token this one is exported as a VALUE, not through a _FILE
+# indirection: it is not a factory secret but an ordinary variable the factory reads live
+# from its own environment and sets on agent rounds and judge votes alone (its AI seam) —
+# it needs no passthrough entry and never reaches a command check. The cost is the same one
+# GH_TOKEN pays below — the value sits in this process's environment table.
+claude_token_file="$secrets_dir/claude-oauth-token"
+if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -s "$claude_token_file" ]]; then
+    warn_if_group_readable "$claude_token_file"
+    token="$(tr -d '[:space:]' < "$claude_token_file")"
+    # Only a non-empty value is exported. The factory forwards this name into every agent
+    # round from its own environment now, so an empty one would not be "unset" to the CLI —
+    # it would override the host keychain login with a credential that cannot authenticate.
+    if [[ -n "$token" ]]; then
+        CLAUDE_CODE_OAUTH_TOKEN="$token"
+        export CLAUDE_CODE_OAUTH_TOKEN
+    fi
+    unset token
+fi
 
 # The deliver stage runs `gh` — in the gnome's round and in that stage's own command checks —
 # and `gh` takes its credential from GH_TOKEN. The tracker's GNOMISH_GITHUB_TOKEN cannot serve
@@ -95,25 +174,39 @@ if [[ -z "${GH_TOKEN:-}" && -f "$pr_token_file" ]]; then
     export GH_TOKEN
 fi
 
-# Only a default: a repeated Spring option is joined with a comma rather than overridden by
-# the last one, so an explicit --factory.instance-name from the caller replaces this instead
-# of competing with it.
-instance_name=(--factory.instance-name="$(basename "$project_dir")")
-for arg in "$@"; do
-    case "$arg" in
-        --factory.instance-name=*) instance_name=() ;;
-    esac
-done
-
 if [[ -z "${GNOMISH_GITHUB_TOKEN_FILE:-}" && -z "${GNOMISH_GITHUB_TOKEN:-}" \
       && "${1:-}" != "--help" && "${1:-}" != "-h" ]]; then
     echo "gnomish: no $secrets_dir/github-token and no GNOMISH_GITHUB_TOKEN — tracker calls will fail" >&2
 fi
 
+if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && "${1:-}" != "--help" && "${1:-}" != "-h" ]]; then
+    echo "gnomish: no $claude_token_file and no CLAUDE_CODE_OAUTH_TOKEN — the agent CLI has no way to authenticate inside the box (mint one with: claude setup-token)" >&2
+fi
+
+# Defaults, each dropped when the caller passes the same key — see the note at the top on
+# why a repeated Spring option must not simply be outranked.
+defaults=(
+    --dir="$project_dir"
+    --factory.instance-name="$(basename "$project_dir")"
+    --factory.bindings.default=container
+    --factory.sandbox.image="$sandbox_image"
+    --factory.sandbox.egress-allowlist="$egress_allowlist"
+    --factory.sandbox.env-passthrough="$env_passthrough"
+)
+
+applied=()
+for default in "${defaults[@]}"; do
+    key="${default%%=*}"
+    overridden=0
+    for arg in "$@"; do
+        if [[ "$arg" == "$key="* || "$arg" == "$key" ]]; then
+            overridden=1
+            break
+        fi
+    done
+    (( overridden )) || applied+=("$default")
+done
+
 exec java -jar "$project_dir/gnomish.jar" \
-    --dir="$project_dir" \
-    ${instance_name[@]+"${instance_name[@]}"} \
-    --factory.bindings.default-binding=host \
-    --factory.agent-cli-binary="$project_dir/claude-gnome" \
-    --factory.sandbox.env-passthrough=GH_TOKEN \
+    ${applied[@]+"${applied[@]}"} \
     "$@"
