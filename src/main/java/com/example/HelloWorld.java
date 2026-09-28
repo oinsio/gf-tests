@@ -40,7 +40,7 @@ public class HelloWorld {
     }
 
     static void run(String greeting, InputStream in, PrintStream out, Path outputFile, Clock clock) throws IOException {
-        out.println(greeting);
+        out.println(shouldUpper(System.getenv("GF_UPPER")) ? greeting.toUpperCase() : greeting);
 
         List<String> history = readHistory(outputFile);
         out.println("Greeting history:");
@@ -64,6 +64,10 @@ public class HelloWorld {
         if (isAffirmative(answer)) {
             appendGreeting(greeting, outputFile, clock);
         }
+    }
+
+    static boolean shouldUpper(String gfUpperValue) {
+        return "1".equals(gfUpperValue);
     }
 
     static List<String> readHistory(Path file) throws IOException {

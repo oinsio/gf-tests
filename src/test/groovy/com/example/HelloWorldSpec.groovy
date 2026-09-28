@@ -454,4 +454,74 @@ class HelloWorldSpec extends Specification {
         System.setOut(System.out)
         System.setIn(System.in)
     }
+
+    def "GF_UPPER value of 1 is upper-case, other values are not"() {
+        expect:
+        HelloWorld.shouldUpper(gfUpperValue) == expected
+
+        where:
+        gfUpperValue | expected
+        "1"          | true
+        "0"          | false
+        "true"       | false
+        "yes"        | false
+        ""           | false
+        null         | false
+    }
+
+    def "printed greeting is upper-cased when GF_UPPER=1 but the saved greeting is not"() {
+        given:
+        def input = new ByteArrayInputStream("yes\n".bytes)
+        def output = new ByteArrayOutputStream()
+        def outputFile = tempDir.resolve("greeting.txt")
+
+        expect:
+        HelloWorld.shouldUpper("1")
+        !HelloWorld.shouldUpper(null)
+
+        when:
+        HelloWorld.run("Hello, Alice!", input, new PrintStream(output), outputFile)
+
+        then:
+        output.toString().contains("Hello, Alice!")
+        Files.readString(outputFile).contains("Hello, Alice!")
+    }
+
+    def "launching with GF_UPPER=1 upper-cases the printed greeting"() {
+        given:
+        def output = launchHelloWorld(["Alice"], [GF_UPPER: "1"])
+
+        expect:
+        output.contains("HELLO, ALICE!")
+    }
+
+    def "launching without GF_UPPER leaves the printed greeting unchanged"() {
+        given:
+        def output = launchHelloWorld(["Alice"], [:])
+
+        expect:
+        output.contains("Hello, Alice!")
+        !output.contains("HELLO, ALICE!")
+    }
+
+    def "launching with GF_UPPER=0 leaves the printed greeting unchanged"() {
+        given:
+        def output = launchHelloWorld([], [GF_UPPER: "0"])
+
+        expect:
+        output.contains("Hello, World!")
+        !output.contains("HELLO, WORLD!")
+    }
+
+    private String launchHelloWorld(List<String> args, Map<String, String> env) {
+        def javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString()
+        def command = [javaBin, "-cp", System.getProperty("java.class.path"), "com.example.HelloWorld"] + args
+        def builder = new ProcessBuilder(command).directory(tempDir.toFile()).redirectErrorStream(true)
+        builder.environment().putAll(env)
+        def process = builder.start()
+        process.outputStream.close()
+        def output = process.inputStream.getText("UTF-8")
+        process.waitFor()
+        return output
+    }
 }
